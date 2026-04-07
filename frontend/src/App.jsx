@@ -5,6 +5,14 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartSidebar from "./components/CartSidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ChatbotWidge from "./components/Chátimport { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AppProvider } from "./context/AppContext";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import CartSidebar from "./components/CartSidebar";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ChatbotWidget from "./components/ChatbotWidget";
 
 import HomePage from "./pages/HomePage";
 import AllProductsPage from "./pages/AllProductsPage";
@@ -72,6 +80,7 @@ export default function App() {
             </Routes>
           </div>
           <Footer />
+          <ChatbotWidget />
         </div>
       </AppProvider>
     </BrowserRouter>
