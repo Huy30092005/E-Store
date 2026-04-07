@@ -24,8 +24,8 @@ const SLIDES = [
     cta: "Buy Now",
     ctaLink: "/all-products?category=Audio",
     secondary: "Find More",
-    bg: "from-orange-50 to-amber-100",
-    accent: "#f97316",
+    bg: "from-brand-50 to-accent-100",
+    accent: "#2DD4BF",
     Icon: Headphones,
   },
   {
@@ -35,8 +35,8 @@ const SLIDES = [
     cta: "Shop Now",
     ctaLink: "/all-products?category=Gaming",
     secondary: "Explore Deals",
-    bg: "from-blue-50 to-indigo-100",
-    accent: "#6366f1",
+    bg: "from-brand-100 to-brand-200",
+    accent: "#A855F7",
     Icon: Gamepad2,
   },
   {
@@ -46,8 +46,8 @@ const SLIDES = [
     cta: "Order Now",
     ctaLink: "/all-products?category=Laptops",
     secondary: "Learn More",
-    bg: "from-zinc-100 to-slate-200",
-    accent: "#0f172a",
+    bg: "from-slate-100 to-slate-300",
+    accent: "#0F172A",
     Icon: Laptop,
   },
 ];
@@ -212,14 +212,14 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {CATEGORIES.map(({ name, Icon, slug }) => (
+          {CATEGORIES.map((item) => (
             <Link
-              key={slug}
-              to={`/all-products?category=${slug}`}
+              key={item.slug}
+              to={`/all-products?category=${item.slug}`}
               className="group flex flex-col items-center gap-2 bg-white hover:bg-brand-50 border border-gray-100 hover:border-brand-200 rounded-2xl py-5 px-2 transition-all"
             >
-              <Icon className="w-8 h-8 group-hover:scale-110 transition-transform text-gray-700 group-hover:text-brand-600" />
-              <span className="text-xs font-medium text-gray-700 group-hover:text-brand-600 transition-colors">{name}</span>
+              <item.Icon className="w-8 h-8 group-hover:scale-110 transition-transform text-gray-700 group-hover:text-brand-600" />
+              <span className="text-xs font-medium text-gray-700 group-hover:text-brand-600 transition-colors">{item.name}</span>
             </Link>
           ))}
         </div>
@@ -293,16 +293,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="font-display font-bold text-2xl text-gray-900 mb-8">Featured Products</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {FEATURED_ITEMS.map(({ Icon, title, desc, cat }) => (
+            {FEATURED_ITEMS.map((item) => (
               <Link
-                key={title}
-                to={`/all-products?category=${cat}`}
+                key={item.title}
+                to={`/all-products?category=${item.cat}`}
                 className="group relative overflow-hidden bg-white rounded-2xl border border-gray-100 hover:border-brand-200 hover:shadow-lg transition-all p-6 flex gap-4"
               >
-                <Icon className="w-12 h-12 flex-shrink-0 text-brand-500 group-hover:scale-110 transition-transform" />
+                <item.Icon className="w-12 h-12 flex-shrink-0 text-brand-500 group-hover:scale-110 transition-transform" />
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-brand-700 transition-colors">{title}</h3>
-                  <p className="text-gray-500 text-sm">{desc}</p>
+                  <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-brand-700 transition-colors">{item.title}</h3>
+                  <p className="text-gray-500 text-sm">{item.desc}</p>
                   <span className="inline-flex items-center gap-1 mt-3 text-brand-600 text-sm font-medium">
                     Buy now
                     <ArrowRight className="w-4 h-4" />
@@ -316,7 +316,7 @@ export default function HomePage() {
 
       {/* ── Gaming Banner ─────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 rounded-3xl p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-4 max-w-lg">
             <h2 className="font-display font-black text-3xl md:text-4xl text-white leading-snug">
               Level Up Your Gaming Experience

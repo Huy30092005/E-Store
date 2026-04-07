@@ -2,7 +2,9 @@ langchain-core
 langchain 
 langchain-openai 
 langchain-mongodb 
+langchain-community
 pymongo 
 python-dotenv 
 openai
 fastapi
+uvicorn

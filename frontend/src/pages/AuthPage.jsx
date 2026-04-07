@@ -32,7 +32,7 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="pt-[72px] min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center px-4 py-16">
+    <main className="pt-[72px] min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-100 flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10">
           {/* Logo */}

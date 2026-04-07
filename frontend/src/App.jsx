@@ -5,13 +5,6 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartSidebar from "./components/CartSidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ChatbotWidge from "./components/Chátimport { useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AppProvider } from "./context/AppContext";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import CartSidebar from "./components/CartSidebar";
-import ProtectedRoute from "./components/ProtectedRoute";
 import ChatbotWidget from "./components/ChatbotWidget";
 
 import HomePage from "./pages/HomePage";
@@ -69,7 +62,7 @@ export default function App() {
 
               {/* 404 */}
               <Route path="*" element={
-                <main className="pt-[72px] min-h-screen flex items-center justify-center">
+                <main className="pt-18 min-h-screen flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-8xl font-display font-black text-gray-100 mb-4">404</p>
                     <h2 className="text-xl font-semibold text-gray-800 mb-2">Page not found</h2>

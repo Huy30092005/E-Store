@@ -37,7 +37,7 @@ export function AboutPage() {
   return (
     <main className="pt-[72px] min-h-screen bg-gray-50">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-orange-50 to-amber-100 py-20 px-4">
+      <section className="bg-gradient-to-br from-brand-50 via-white to-accent-100 py-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
           <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-brand-500" />
           <h1 className="font-display font-black text-5xl text-gray-900 mb-4">
@@ -52,11 +52,11 @@ export function AboutPage() {
 
       {/* Values */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 grid md:grid-cols-3 gap-6">
-        {VALUE_ITEMS.map(({ Icon, title, desc }) => (
-          <div key={title} className="bg-white rounded-2xl border border-gray-100 p-7 text-center hover:shadow-md transition-shadow">
-            <Icon className="w-10 h-10 mx-auto mb-3 text-brand-500" />
-            <h3 className="font-display font-bold text-xl text-gray-900 mb-2">{title}</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+        {VALUE_ITEMS.map((item) => (
+          <div key={item.title} className="bg-white rounded-2xl border border-gray-100 p-7 text-center hover:shadow-md transition-shadow">
+            <item.Icon className="w-10 h-10 mx-auto mb-3 text-brand-500" />
+            <h3 className="font-display font-bold text-xl text-gray-900 mb-2">{item.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </section>
@@ -89,7 +89,7 @@ export function ContactPage() {
 
   return (
     <main className="pt-[72px] min-h-screen bg-gray-50">
-      <section className="bg-gradient-to-br from-orange-50 to-amber-100 py-20 px-4 text-center">
+      <section className="bg-gradient-to-br from-brand-50 via-white to-accent-100 py-20 px-4 text-center">
         <h1 className="font-display font-black text-5xl text-gray-900 mb-3">Contact Us</h1>
         <p className="text-gray-600">We'd love to hear from you.</p>
       </section>
@@ -142,10 +142,10 @@ export function ContactPage() {
             </form>
 
             <div className="mt-8 pt-6 border-t border-gray-100 grid sm:grid-cols-2 gap-4">
-              {CONTACT_ITEMS.map(({ Icon, label }) => (
-                <div key={label} className="flex items-center gap-3 text-sm text-gray-600">
-                  <Icon className="w-5 h-5 text-brand-500" />
-                  {label}
+              {CONTACT_ITEMS.map((item) => (
+                <div key={item.label} className="flex items-center gap-3 text-sm text-gray-600">
+                  <item.Icon className="w-5 h-5 text-brand-500" />
+                  {item.label}
                 </div>
               ))}
             </div>

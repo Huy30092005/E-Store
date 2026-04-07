@@ -25,6 +25,8 @@ app.add_middleware(
 )
 
 
+# ── Schemas ──────────────────────────────────────────────────────────────────
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: str = Field(..., min_length=1)
@@ -34,13 +36,23 @@ class ChatResponse(BaseModel):
     answer: str
 
 
+class IngestRequest(BaseModel):
+    product: dict  # full product document sent from Express
+
+
+class DeleteRequest(BaseModel):
+    product_id: str = Field(..., min_length=1)
+
+
+# ── Lazy loaders ─────────────────────────────────────────────────────────────
+
 @lru_cache
 def get_conversational_chain():
-    # Delay expensive dependency setup until the first real chat request.
     from memory_chain import conversational_chain
-
     return conversational_chain
 
+
+# ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health() -> dict[str, bool]:
@@ -54,7 +66,6 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
-
     if not session_id:
         raise HTTPException(status_code=400, detail="Session ID cannot be empty.")
 
@@ -63,3 +74,32 @@ def chat(request: ChatRequest) -> ChatResponse:
         config={"configurable": {"session_id": session_id}},
     )
     return ChatResponse(answer=answer)
+
+
+@app.post("/ingest", status_code=200)
+def ingest_or_update(request: IngestRequest):
+    """
+    Called by Express on product CREATE or UPDATE.
+    Deletes the old vector (if exists) and inserts a fresh one.
+    Safe to call for both new and existing products.
+    """
+    from ingest import update_one
+    try:
+        update_one(request.product)
+        return {"ok": True, "message": "Product vector upserted."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/ingest", status_code=200)
+def delete_vector(request: DeleteRequest):
+    """
+    Called by Express on product DELETE.
+    Removes the matching vector document from product_vector.
+    """
+    from ingest import delete_one
+    try:
+        delete_one(request.product_id)
+        return {"ok": True, "message": f"Vector deleted for product_id: {request.product_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
