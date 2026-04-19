@@ -258,4 +258,118 @@ export const deleteProduct = async (req, res) => {
   }
 };
 
+
+
+export const addComment = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { content, rating } = req.body;
+    const userId = req.user._id;
+
+    if (!content) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const alreadyCommented = product.comments.find(
+      (c) => c.userId?.toString() === userId.toString()
+    );
+
+    if (alreadyCommented) {
+      return res.status(400).json({ message: "You already commented" });
+    }
+
+    const newComment = {
+      userId,
+      content,
+      rating,
+    };
+
+    product.comments.push(newComment);
+
+    const totalRating = product.comments.reduce(
+      (sum, c) => sum + (c.rating || 0),
+      0
+    );
+
+    product.reviewCount = product.comments.length;
+    product.rating = totalRating / product.reviewCount;
+
+    await product.save();
+
+    res.status(201).json({
+      message: "Comment added",
+      comments: product.comments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getComments = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await productModel
+      .findById(productId)
+      .populate("comments.userId", "name email");
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const sortedComments = product.comments.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.status(200).json(sortedComments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const deleteComment = async (req, res) => {
+  try {
+    const { productId, commentId } = req.params;
+    const userId = req.user._id;
+
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const comment = product.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+
+    if (comment.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    comment.deleteOne();
+
+  
+    const totalRating = product.comments.reduce(
+      (sum, c) => sum + (c.rating || 0),
+      0
+    );
+
+    product.reviewCount = product.comments.length;
+    product.rating =
+      product.reviewCount > 0 ? totalRating / product.reviewCount : 0;
+
+    await product.save();
+
+    res.status(200).json({ message: "Comment deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 export { addProduct, listProduct, removeProduct, singleProduct, updateProduct };
