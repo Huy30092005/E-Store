@@ -23,6 +23,14 @@ const productSchema = new mongoose.Schema(
     bestSeller: { type: Boolean, default: false },
     stockQuantity: { type: Number, required: true },
     date: { type: Number, required: true },
+    comments: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
+        content: { type: String, required: true },
+        rating: { type: Number, min: 1, max: 5 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     toJSON: { virtuals: true },
