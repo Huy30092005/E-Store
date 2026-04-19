@@ -26,5 +26,8 @@ productRouter.post("/remove", adminAuth, removeProduct);
 productRouter.post("/update", adminAuth, updateProduct);
 productRouter.post("/single", singleProduct);
 productRouter.get("/list", listProduct);
+productRouter.post("/:productId/comments", addComment);
+productRouter.get("/:productId/comments", getComments);
+productRouter.delete("/:productId/comments/:commentId", deleteComment);
 
 export default productRouter;
