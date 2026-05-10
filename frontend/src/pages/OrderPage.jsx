@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { getOrders, getOrder } from "../services/api";
+import { getOrders, getOrder, addComment } from "../services/api";
 import { ArrowLeft, Check, Package, SearchX } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -11,6 +11,109 @@ const STATUS_COLORS = {
   cancelled:  "bg-red-100 text-red-700",
 };
 
+// ── Star rating ──────────────────────────────────────────
+function StarRating({ value, onChange }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          className={`text-3xl transition-colors ${star <= value ? "text-yellow-400" : "text-gray-300 hover:text-yellow-300"}`}
+          onClick={() => onChange(star)}
+          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Toast notification ───────────────────────────────────
+function Toast({ toast }) {
+  if (!toast) return null;
+  const isSuccess = toast.type === "success";
+  return (
+    <div
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-lg text-sm font-medium transition-all duration-300 ${
+        isSuccess
+          ? "bg-green-500 text-white"
+          : "bg-red-500 text-white"
+      }`}
+    >
+      <span className="text-base">{isSuccess ? "✓" : "✕"}</span>
+      {toast.message}
+    </div>
+  );
+}
+
+// ── Rate product modal ───────────────────────────────────
+function RateProductModal({ open, onClose, onSubmit }) {
+  const [rating, setRating] = useState(0);
+  const [content, setContent] = useState("");
+
+  if (!open) return null;
+
+  const handleSubmit = () => {
+    onSubmit({ rating, content });
+    setRating(0);
+    setContent("");
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl relative mx-4">
+        <button
+          className="absolute top-3 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+        <h2 className="font-semibold text-lg mb-1 text-gray-900">Rate the Product</h2>
+        <p className="text-sm text-gray-400 mb-5">Share your experience with other customers.</p>
+
+        {/* Stars */}
+        <div className="mb-2">
+          <p className="text-sm font-medium text-gray-700 mb-2">Your rating</p>
+          <StarRating value={rating} onChange={setRating} />
+          {rating > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              {["", "Poor", "Fair", "Good", "Very good", "Excellent"][rating]}
+            </p>
+          )}
+        </div>
+
+        {/* Text */}
+        <div className="mb-5 mt-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">Your review</p>
+          <textarea
+            className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none text-gray-700 placeholder-gray-300"
+            rows={4}
+            placeholder="Write your review here..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+        </div>
+
+        <button
+          className="w-full bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+          disabled={rating === 0 || !content.trim()}
+        >
+          Submit Review
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Single order detail ──────────────────────────────────
 export function OrderDetailPage() {
   const { id } = useParams();
@@ -18,6 +121,13 @@ export function OrderDetailPage() {
   const success = searchParams.get("success");
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   useEffect(() => {
     getOrder(id)
@@ -25,6 +135,15 @@ export function OrderDetailPage() {
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleReviewSubmit = async ({ rating, content }) => {
+    try {
+      await addComment(order.items?.[0]?.product?._id, { rating, content });
+      showToast("success", "Review submitted successfully!");
+    } catch {
+      showToast("error", "Failed to submit review. Please try again.");
+    }
+  };
 
   if (loading) return (
     <main className="pt-[72px] min-h-screen flex items-center justify-center">
@@ -96,7 +215,7 @@ export function OrderDetailPage() {
 
         {/* Shipping */}
         {order.shippingAddress && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-5">
             <h2 className="font-semibold text-gray-900 mb-3">Shipping Address</h2>
             <p className="text-sm text-gray-600 leading-relaxed">
               {order.shippingAddress.name}<br />
@@ -106,6 +225,18 @@ export function OrderDetailPage() {
             </p>
           </div>
         )}
+
+        {/* Rate the product */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-5">
+          <h2 className="font-semibold text-gray-900 mb-1">Enjoyed your purchase?</h2>
+          <p className="text-sm text-gray-400 mb-4">Let others know what you think.</p>
+          <button
+            className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            onClick={() => setModalOpen(true)}
+          >
+            Rate the Product
+          </button>
+        </div>
 
         <div className="mt-6 flex gap-3">
           <Link to="/orders" className="flex-1 inline-flex items-center justify-center gap-1.5 border border-gray-200 hover:border-brand-400 text-gray-700 hover:text-brand-600 py-3 rounded-xl text-sm font-medium transition-colors">
@@ -117,6 +248,13 @@ export function OrderDetailPage() {
           </Link>
         </div>
       </div>
+
+      <RateProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleReviewSubmit}
+      />
+      <Toast toast={toast} />
     </main>
   );
 }

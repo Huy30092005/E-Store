@@ -18,7 +18,7 @@ const WELCOME_MESSAGE = {
   sender: "SimTech Assistant",
   direction: "incoming",
   content:
-    "Hi! I'm your SimTech assistant. Ask me about products, recommendations, orders, or anything the knowledge base can help with.",
+    "Hi! I'm your SimTech assistant. Ask me about products, recommendations, orders, or store data.",
   sentTime: "just now",
 };
 
@@ -72,6 +72,149 @@ function findRelatedProducts(answer, products) {
     .sort((left, right) => right.score - left.score);
 
   return scoredProducts.slice(0, 3).map(({ product }) => product);
+}
+
+function getProductKey(product) {
+  return product?._id || product?.id || product?.name;
+}
+
+function scoreProductLine(line, product) {
+  const normalizedLine = normalizeText(line);
+  const normalizedName = normalizeText(product.name);
+
+  if (!normalizedLine || !normalizedName) {
+    return 0;
+  }
+
+  const nameTokens = normalizedName.split(" ").filter((token) => token.length >= 3);
+  const overlap = nameTokens.filter((token) => normalizedLine.includes(token)).length;
+
+  if (normalizedLine.includes(normalizedName)) {
+    return 20 + overlap;
+  }
+
+  return overlap;
+}
+
+function findProductForLine(line, products, usedProductKeys) {
+  return products
+    .map((product) => ({ product, score: scoreProductLine(line, product) }))
+    .filter(({ product, score }) => score >= 2 && !usedProductKeys.has(getProductKey(product)))
+    .sort((left, right) => right.score - left.score)[0]?.product;
+}
+
+function compactMarkdown(text = "") {
+  return text
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanProductLine(line, productName) {
+  const escapedName = productName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const markerPattern = /^(\s*(?:[-*]|\d+[.)])\s*)/;
+  const namePattern = new RegExp(`^(?:\\*\\*)?${escapedName}(?:\\*\\*)?\\s*[:-]?\\s*`, "i");
+
+  return line.replace(markerPattern, "").replace(namePattern, "").trim();
+}
+
+function buildAssistantBlocks(answer, relatedProducts) {
+  if (!Array.isArray(relatedProducts) || relatedProducts.length === 0) {
+    return [{ type: "text", content: compactMarkdown(answer) }];
+  }
+
+  const blocks = [];
+  const textBuffer = [];
+  const usedProductKeys = new Set();
+
+  const flushText = () => {
+    const content = compactMarkdown(textBuffer.join("\n"));
+    if (content) {
+      blocks.push({ type: "text", content });
+    }
+    textBuffer.length = 0;
+  };
+
+  answer.split(/\r?\n/).forEach((line) => {
+    const product = findProductForLine(line, relatedProducts, usedProductKeys);
+
+    if (!product) {
+      textBuffer.push(line);
+      return;
+    }
+
+    flushText();
+    usedProductKeys.add(getProductKey(product));
+    blocks.push({
+      type: "product",
+      product,
+      content: compactMarkdown(cleanProductLine(line, product.name)),
+    });
+  });
+
+  flushText();
+
+  if (usedProductKeys.size === 0) {
+    return [{ type: "text", content: compactMarkdown(answer) }];
+  }
+
+  return blocks;
+}
+
+function ProductAnswerRow({ product, content }) {
+  return (
+    <Link
+      to={`/product/${product._id}`}
+      className="chatbot-product-card flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 transition hover:border-brand-300 hover:shadow-md"
+    >
+      <img
+        src={product.image}
+        alt={product.name}
+        className="h-16 w-16 shrink-0 rounded-xl bg-slate-100 object-cover"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-semibold uppercase text-brand-600 dark:text-brand-100">
+          {product.category || "Product"}
+        </p>
+        <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900 dark:text-brand-200">
+          {product.name}
+        </p>
+        <p className="mt-0.5 text-sm font-medium text-slate-600">
+          ${Number(product.price || 0).toFixed(2)}
+        </p>
+        {content ? (
+          <div className="chatbot-markdown chatbot-product-summary mt-1.5 text-slate-700">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
+
+function AssistantMessageContent({ message }) {
+  const blocks = buildAssistantBlocks(
+    message.model.message,
+    message.model.relatedProducts
+  );
+
+  return (
+    <div className="chatbot-answer-flow">
+      {blocks.map((block, index) =>
+        block.type === "product" ? (
+          <ProductAnswerRow
+            key={`${getProductKey(block.product)}-${index}`}
+            product={block.product}
+            content={block.content}
+          />
+        ) : (
+          <div key={`text-${index}`} className="chatbot-markdown">
+            <ReactMarkdown>{block.content}</ReactMarkdown>
+          </div>
+        )
+      )}
+    </div>
+  );
 }
 
 const ChatbotWidget = () => {
@@ -211,7 +354,7 @@ const ChatbotWidget = () => {
                 </div>
                 <div>
                   <p className="text-sm font-semibold tracking-[0.18em] uppercase text-white/75">
-                    RAG Support
+                    AI Agent
                   </p>
                   <h3 className="text-lg font-semibold leading-tight">
                     SimTech Assistant
@@ -227,7 +370,7 @@ const ChatbotWidget = () => {
               </button>
             </div>
             <p className="max-w-[26ch] text-sm leading-6 text-white/84">
-              Ask product questions and let the FastAPI RAG service answer from your store knowledge base.
+              Ask product and store questions powered by the FastAPI AI agent.
             </p>
           </div>
 
@@ -237,52 +380,20 @@ const ChatbotWidget = () => {
                 <MessageList
                   typingIndicator={
                     isLoading ? (
-                      <TypingIndicator content="SimTech Assistant is searching the knowledge base..." />
+                      <TypingIndicator content="SimTech Assistant is checking store data..." />
                     ) : null
                   }
                 >
                   {uiMessages.map((message) => (
                     <Message key={message.key} model={message.model}>
                       <Message.CustomContent>
-                        <div className="space-y-3">
-                          <div
-                            className={`chatbot-markdown ${
-                              message.isUser ? "chatbot-markdown-user" : ""
-                            }`}
-                          >
+                        {message.isUser ? (
+                          <div className="chatbot-markdown chatbot-markdown-user">
                             <ReactMarkdown>{message.model.message}</ReactMarkdown>
                           </div>
-                          {!message.isUser &&
-                          Array.isArray(message.model.relatedProducts) &&
-                          message.model.relatedProducts.length > 0 ? (
-                            <div className="grid gap-2">
-                              {message.model.relatedProducts.map((product) => (
-                                <Link
-                                  key={product._id}
-                                  to={`/product/${product._id}`}
-                                  className="chatbot-product-card flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 transition hover:border-brand-300 hover:shadow-md"
-                                >
-                                  <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="h-14 w-14 rounded-xl bg-slate-100 object-cover"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">
-                                      {product.category || "Product"}
-                                    </p>
-                                    <p className="line-clamp-2 text-sm font-semibold text-slate-900">
-                                      {product.name}
-                                    </p>
-                                    <p className="mt-1 text-sm font-medium text-slate-600">
-                                      ${Number(product.price || 0).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </Link>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
+                        ) : (
+                          <AssistantMessageContent message={message} />
+                        )}
                       </Message.CustomContent>
                     </Message>
                   ))}

@@ -1,30 +1,32 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ArrowLeftRight,
   ArrowRight,
   Mail,
   Paintbrush,
   Phone,
   PlugZap,
   ShoppingBag,
+  ThumbsUp,
   Zap,
 } from "lucide-react";
 
 const VALUE_ITEMS = [
   {
+    Icon: ThumbsUp,
+    title: "Reliable",
+    desc: "In SimTech, we priortize the experience of the customer.",
+  },
+  {
     Icon: Zap,
-    title: "Lightning Fast",
-    desc: "Optimised for performance — instant loads, smooth interactions.",
+    title: "Fast Delivery",
+    desc: "The products will be delivered to your place within 5-7 business days upon completing the order.",
   },
   {
-    Icon: Paintbrush,
-    title: "Beautiful Design",
-    desc: "Minimal yet striking UI that puts your products first.",
-  },
-  {
-    Icon: PlugZap,
-    title: "API Ready",
-    desc: "Connects seamlessly to any Express REST backend you build.",
+    Icon: ArrowLeftRight,
+    title: "30-day warranty",
+    desc: "We provide 30-day warranty policies for customers if any product faulty happens.",
   },
 ];
 

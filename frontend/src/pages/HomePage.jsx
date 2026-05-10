@@ -24,7 +24,7 @@ const SLIDES = [
     cta: "Buy Now",
     ctaLink: "/all-products?category=Audio",
     secondary: "Find More",
-    bg: "from-brand-50 to-accent-100",
+    bgImage: "../assets/macbook.jpg",
     accent: "#2DD4BF",
     Icon: Headphones,
   },
@@ -35,7 +35,7 @@ const SLIDES = [
     cta: "Shop Now",
     ctaLink: "/all-products?category=Gaming",
     secondary: "Explore Deals",
-    bg: "from-brand-100 to-brand-200",
+    bgImage: "assets/macbook.jpg",
     accent: "#A855F7",
     Icon: Gamepad2,
   },
@@ -46,7 +46,7 @@ const SLIDES = [
     cta: "Order Now",
     ctaLink: "/all-products?category=Laptops",
     secondary: "Learn More",
-    bg: "from-slate-100 to-slate-300",
+    bgImage: "../assets/macbook.jpg",
     accent: "#0F172A",
     Icon: Laptop,
   },
@@ -140,12 +140,22 @@ export default function HomePage() {
 
   const current = SLIDES[slide];
   const HeroIcon = current.Icon;
+  const heroStyle = current.bgImage
+    ? {
+        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.82)), url(${current.bgImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : undefined;
 
   return (
     <main className="pt-[72px]">
       {/* ── Hero ─────────────────────────────────────── */}
       <section
-        className={`relative overflow-hidden bg-gradient-to-br ${current.bg} transition-all duration-700 min-h-[88vh] flex items-center`}
+        className={`relative overflow-hidden transition-all duration-700 min-h-[88vh] flex items-center ${
+          current.bgImage ? "" : `bg-gradient-to-br ${current.bg}`
+        }`}
+        style={heroStyle}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-16 md:py-0 grid md:grid-cols-2 gap-10 items-center">
           {/* Text */}

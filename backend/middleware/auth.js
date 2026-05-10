@@ -9,6 +9,8 @@ const getTokenFromHeaders = (headers) => {
   return headers.token;
 };
 
+const REFRESH_THRESHOLD = 5 * 60; // 5 minutes in seconds
+
 const authUser = async (req, res, next) => {
   const token = getTokenFromHeaders(req.headers);
 
@@ -21,6 +23,14 @@ const authUser = async (req, res, next) => {
     req.userId = tokenDecoded.id;
     req.user = { id: tokenDecoded.id };
     req.body = { ...req.body, userId: tokenDecoded.id };
+
+    // Refresh token if it's about to expire in less than 5 minutes
+    const now = Math.floor(Date.now() / 1000);
+    if (tokenDecoded.exp && tokenDecoded.exp - now < REFRESH_THRESHOLD) {
+      const newToken = jwt.sign({ id: tokenDecoded.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.setHeader('x-refresh-token', newToken);
+    }
+
     next();
   } catch (error) {
     console.log(error);

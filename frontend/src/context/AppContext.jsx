@@ -10,6 +10,19 @@ import {
 } from "../services/api";
 
 const AppContext = createContext(null);
+const THEME_KEY = "quickcart_theme";
+
+function getInitialTheme() {
+  const storedTheme = localStorage.getItem(THEME_KEY);
+
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -17,6 +30,16 @@ export function AppProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [loading, setLoading] = useState(Boolean(localStorage.getItem("token")));
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+  }, []);
 
   // ── Bootstrap user session ────────────────────────────
   useEffect(() => {
@@ -132,6 +155,7 @@ export function AppProvider({ children }) {
         cart, cartCount, cartTotal,
         addToCart, updateQuantity, removeFromCart, clearCart,
         cartOpen, setCartOpen,
+        theme, toggleTheme, setTheme,
       }}
     >
       {children}

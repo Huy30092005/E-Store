@@ -2,17 +2,21 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login as apiLogin, register as apiRegister } from "../services/api";
 import { useApp } from "../context/AppContext";
+import { googleOAuthLogin } from "../services/googleOAuth";
 
 export default function AuthPage() {
   const location = useLocation();
-  const [isLogin, setIsLogin] = useState(!location.pathname.includes("register"));
+  const [isLogin, setIsLogin] = useState(
+    !location.pathname.includes("register")
+  );
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useApp();
   const navigate = useNavigate();
 
-  const handle = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handle = (e) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -21,11 +25,17 @@ export default function AuthPage() {
     try {
       const res = isLogin
         ? await apiLogin({ email: form.email, password: form.password })
-        : await apiRegister({ name: form.name, email: form.email, password: form.password });
+        : await apiRegister({
+            name: form.name,
+            email: form.email,
+            password: form.password,
+          });
       login(res.data.user, res.data.token);
       navigate(location.state?.from || "/");
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+      setError(
+        err.response?.data?.message || "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -41,13 +51,17 @@ export default function AuthPage() {
               <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center">
                 <span className="text-white font-display font-bold">Q</span>
               </div>
-              <span className="font-display font-bold text-2xl text-gray-900">SimTech</span>
+              <span className="font-display font-bold text-2xl text-gray-900">
+                SimTech
+              </span>
             </div>
             <h1 className="font-display font-bold text-2xl text-gray-900">
               {isLogin ? "Welcome back!" : "Create an account"}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              {isLogin ? "Sign in to continue shopping" : "Join thousands of happy shoppers"}
+              {isLogin
+                ? "Sign in to continue shopping"
+                : "Join thousands of happy shoppers"}
             </p>
           </div>
 
@@ -74,7 +88,9 @@ export default function AuthPage() {
           <form onSubmit={submit} className="space-y-4">
             {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Full Name
+                </label>
                 <input
                   name="name"
                   value={form.name}
@@ -86,7 +102,9 @@ export default function AuthPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email
+              </label>
               <input
                 type="email"
                 name="email"
@@ -98,7 +116,9 @@ export default function AuthPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Password
+              </label>
               <input
                 type="password"
                 name="password"
@@ -112,7 +132,10 @@ export default function AuthPage() {
 
             {isLogin && (
               <div className="text-right">
-                <Link to="/forgot-password" className="text-xs text-brand-600 hover:underline">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-brand-600 hover:underline"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -129,7 +152,11 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-brand-300 text-white py-3.5 rounded-xl font-semibold text-sm transition-colors"
             >
-              {loading ? "Please wait…" : isLogin ? "Sign In" : "Create Account"}
+              {loading
+                ? "Please wait…"
+                : isLogin
+                ? "Sign In"
+                : "Create Account"}
             </button>
           </form>
 
@@ -142,7 +169,24 @@ export default function AuthPage() {
               {isLogin ? "Sign up" : "Sign in"}
             </button>
           </p>
+           {/* Google OAuth Button */}
+        <div className="mt-6 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={googleOAuthLogin}
+            className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 py-3.5 rounded-xl font-semibold text-sm transition-colors shadow-sm"
+          >
+            <img
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            Continue with Google
+          </button>
         </div>
+        </div>
+
+        
       </div>
     </main>
   );

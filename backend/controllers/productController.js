@@ -2,6 +2,33 @@ import { v2 as cloudinary } from "cloudinary";
 import productModel from "../models/productModel.js";
 import axios from "axios";
 
+// helper — fire and forget, never block the main response
+const syncVectorDB = async (method, data) => {
+  try {
+    console.log(
+      `[Vector Sync] Sending ${method.toUpperCase()} request to ${AI_SERVICE_URL}/ingest`,
+      data
+    );
+    const response = await axios({
+      method,
+      url: `${AI_SERVICE_URL}/ingest`,
+      data,
+      timeout: 10000,
+    });
+    console.log(
+      `[Vector Sync] ${method.toUpperCase()} ${AI_SERVICE_URL}/ingest responded with ${response.status}`,
+      response.data
+    );
+  } catch (err) {
+    console.error("⚠️  Vector sync failed:", err.message);
+    if (err.response) {
+      console.error("[Vector Sync] Response status:", err.response.status);
+      console.error("[Vector Sync] Response data:", err.response.data);
+    }
+    // intentionally not re-throwing — product op already succeeded
+  }
+};
+
 const parseList = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
@@ -107,6 +134,8 @@ const addProduct = async (req, res) => {
     const product = new productModel(productData);
     await product.save();
 
+    void syncVectorDB("post", { product: product.toObject() });
+
     res.json({ success: true, message: "Product added" });
   } catch (error) {
     console.log(error);
@@ -134,6 +163,8 @@ const updateProduct = async (req, res) => {
       new: true,
       runValidators: true,
     });
+
+    void syncVectorDB("post", { product: updatedProduct.toObject() });
 
     res.json({
       success: true,
@@ -181,7 +212,14 @@ const listProduct = async (req, res) => {
 
 const removeProduct = async (req, res) => {
   try {
-    await productModel.findByIdAndDelete(req.body.id);
+    const deletedProduct = await productModel.findByIdAndDelete(req.body.id);
+
+    if (!deletedProduct) {
+      return res.json({ success: false, message: "Product not found" });
+    }
+
+    void syncVectorDB("delete", { product_id: req.body.id });
+
     res.json({ success: true, message: "Product removed" });
   } catch (error) {
     console.log(error);
@@ -206,15 +244,15 @@ const singleProduct = async (req, res) => {
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
-// helper — fire and forget, never block the main response
-const syncVectorDB = async (method, data) => {
-  try {
-    await axios({ method, url: `${AI_SERVICE_URL}/ingest`, data });
-  } catch (err) {
-    console.error("⚠️  Vector sync failed:", err.message);
-    // intentionally not re-throwing — product op already succeeded
-  }
+export {
+  addProduct,
+  listProduct,
+  removeProduct,
+  singleProduct,
+  updateProduct,
 };
+<<<<<<< HEAD
+=======
 
 
 // CREATE
@@ -258,4 +296,119 @@ export const deleteProduct = async (req, res) => {
   }
 };
 
+
+
+export const addComment = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { content, rating } = req.body;
+    const userId = req.user._id;
+
+    if (!content) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const alreadyCommented = product.comments.find(
+      (c) => c.userId?.toString() === userId.toString()
+    );
+
+    if (alreadyCommented) {
+      return res.status(400).json({ message: "You already commented" });
+    }
+
+    const newComment = {
+      userId,
+      content,
+      rating,
+    };
+
+    product.comments.push(newComment);
+
+    const totalRating = product.comments.reduce(
+      (sum, c) => sum + (c.rating || 0),
+      0
+    );
+
+    product.reviewCount = product.comments.length;
+    product.rating = totalRating / product.reviewCount;
+
+    await product.save();
+
+    res.status(201).json({
+      message: "Comment added",
+      comments: product.comments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getComments = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await productModel
+      .findById(productId)
+      .populate("comments.userId", "name email");
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const sortedComments = product.comments.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.status(200).json(sortedComments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const deleteComment = async (req, res) => {
+  try {
+    const { productId, commentId } = req.params;
+    const userId = req.user._id;
+
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const comment = product.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+
+    if (comment.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    comment.deleteOne();
+
+  
+    const totalRating = product.comments.reduce(
+      (sum, c) => sum + (c.rating || 0),
+      0
+    );
+
+    product.reviewCount = product.comments.length;
+    product.rating =
+      product.reviewCount > 0 ? totalRating / product.reviewCount : 0;
+
+    await product.save();
+
+    res.status(200).json({ message: "Comment deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 export { addProduct, listProduct, removeProduct, singleProduct, updateProduct };
+>>>>>>> d3a3a03998afb5679ba8e055162b395a8c568b95

@@ -163,6 +163,7 @@ export async function register(payload) {
 export async function login(payload) {
   const response = await http.post("/user/login", payload);
   const data = resolveSuccess(response);
+  console.log("login response data:", data);
   setStoredUser(data.user);
   return { data: { token: data.token, user: data.user } };
 }
@@ -389,3 +390,15 @@ export function logoutSession() {
   clearStoredUser();
   localStorage.removeItem(TOKEN_KEY);
 }
+
+export async function getComments(productId) {
+  const response = await http.get(`/comment/product/${productId}`);
+  return { data: response.data };
+}
+
+export async function addComment(productId, payload) {
+  ensureAuth();
+  const response = await http.post(`/comment/product/${productId}`, payload);
+  return { data: response.data };
+}
+

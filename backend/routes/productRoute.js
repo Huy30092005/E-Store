@@ -6,6 +6,7 @@ import {
   singleProduct,
   updateProduct,
 } from "../controllers/productController.js";
+import generateProductDescription from "../handlers/productDescriptionHandler.js";
 import upload from "../middleware/multer.js";
 import adminAuth from "../middleware/adminAuth.js";
 
@@ -22,9 +23,13 @@ productRouter.post(
   ]),
   addProduct
 );
+productRouter.post("/generate-description", adminAuth, generateProductDescription);
 productRouter.post("/remove", adminAuth, removeProduct);
 productRouter.post("/update", adminAuth, updateProduct);
 productRouter.post("/single", singleProduct);
 productRouter.get("/list", listProduct);
+productRouter.post("/:productId/comments", addComment);
+productRouter.get("/:productId/comments", getComments);
+productRouter.delete("/:productId/comments/:commentId", deleteComment);
 
 export default productRouter;

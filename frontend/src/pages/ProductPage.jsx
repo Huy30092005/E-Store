@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { getProduct, getProducts } from "../services/api";
+import { getProduct, getProducts, getComments } from "../services/api";
 import { useApp } from "../context/AppContext";
 import ProductCard from "../components/ProductCard";
 import { Check, Minus, Plus, SearchX, Star } from "lucide-react";
+
 
 const STATUS_META = {
   active: {
@@ -34,6 +35,9 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedModel, setSelectedModel] = useState("default");
+  const [activeTab, setActiveTab] = useState("description");
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const markdownComponents = {
     p: ({ children }) => <p className="mb-3 last:mb-0 leading-7">{children}</p>,
@@ -56,12 +60,16 @@ export default function ProductPage() {
       <h3 className="mb-2 text-base font-semibold text-gray-900">{children}</h3>
     ),
   };
+  
 
   useEffect(() => {
+    
     setLoading(true);
     setImgIndex(0);
     setQty(1);
     setSelectedModel("default");
+    setActiveTab("description");
+    setComments([]);
     getProduct(id)
       .then((res) => {
         setProduct(res.data);
@@ -82,8 +90,20 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "comments" && comments.length === 0) {
+    setCommentsLoading(true);
+    getComments(product._id)
+    .then((res) => setComments(res.data))
+    .catch(() => setComments([]))
+    .finally(() => setCommentsLoading(false));
+}
+  };
+
   if (loading) {
     return (
+      
       <main className="pt-[72px] min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 grid md:grid-cols-2 gap-10">
           <div className="skeleton aspect-square rounded-2xl" />
@@ -236,10 +256,74 @@ export default function ProductPage() {
               )}
             </div>
 
-            <div className="max-h-64 overflow-y-auto rounded-2xl border border-gray-50 px-4 py-3 text-sm text-gray-600">
-              <ReactMarkdown components={markdownComponents}>
-                {product.description || ""}
-              </ReactMarkdown>
+            {/* Description / Comments tabs */}
+            <div className="space-y-3">
+              <div className="flex gap-1 border-b border-gray-100">
+                {["description", "comments"].map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => handleTabChange(tab)}
+                    className={`pb-2.5 px-3 text-sm font-semibold capitalize transition-colors border-b-2 -mb-px ${
+                      activeTab === tab
+                        ? "border-brand-500 text-brand-600"
+                        : "border-transparent text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {tab === "description" ? "Description" : "Comments"}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === "description" ? (
+                <div className="max-h-64 overflow-y-auto rounded-2xl border border-gray-50 px-4 py-3 text-sm text-gray-600">
+                  <ReactMarkdown components={markdownComponents}>
+                    {product.description || ""}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
+                  {commentsLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((n) => (
+                        <div key={n} className="rounded-2xl border border-gray-100 p-4 space-y-2">
+                          <div className="skeleton h-4 w-1/4 rounded" />
+                          <div className="skeleton h-3 w-full rounded" />
+                          <div className="skeleton h-3 w-3/4 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">No comments yet.</p>
+                  ) : (
+                    comments.map((c, i) => (
+                      <div key={c._id || i} className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-gray-800">
+                            {c.author || c.user?.name || "Anonymous"}
+                          </span>
+                          {c.rating != null && (
+                            <div className="flex items-center gap-1">
+                              <div className="flex text-amber-400">
+                                {Array.from({ length: 5 }, (_, si) => (
+                                  <Star
+                                    key={si}
+                                    className={`w-3.5 h-3.5 ${si < Math.round(c.rating) ? "fill-current" : "fill-gray-200 text-gray-200"}`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-gray-500 font-medium">{c.rating}/5</span>
+                            </div>
+                          )}
+                        </div>
+                        {c.content || c.text || c.body ? (
+                          <p className="text-sm text-gray-600 leading-6">{c.content || c.text || c.body}</p>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {statusMeta.message && (

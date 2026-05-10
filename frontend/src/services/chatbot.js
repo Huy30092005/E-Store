@@ -1,4 +1,7 @@
-const CHATBOT_API_URL = import.meta.env.VITE_CHATBOT_API_URL || "http://localhost:8000";
+const CHATBOT_API_URL =
+  import.meta.env.VITE_AI_AGENT_API_URL ||
+  import.meta.env.VITE_CHATBOT_API_URL ||
+  "http://localhost:8000";
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 
 function createSessionId() {
@@ -22,14 +25,14 @@ export function getChatbotSessionId() {
 }
 
 export async function sendChatMessage(message, sessionId, signal) {
-  const response = await fetch(`${CHATBOT_API_URL}/chat`, {
+  const response = await fetch(`${CHATBOT_API_URL}/query`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      message,
-      session_id: sessionId,
+      question: message,
+      conversation_id: sessionId,
     }),
     signal,
   });
@@ -56,4 +59,3 @@ export async function sendChatMessage(message, sessionId, signal) {
 
   return payload.answer.trim();
 }
-

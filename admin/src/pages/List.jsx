@@ -38,17 +38,17 @@ import EditSharpIcon from "@mui/icons-material/EditSharp";
 import DeleteOutlineSharpIcon from "@mui/icons-material/DeleteOutlineSharp";
 import SellSharpIcon from "@mui/icons-material/SellSharp";
 
-const CATEGORY_OPTIONS = [
-  "PC",
-  "Laptop",
-  "Gaming",
-  "Audio",
-  "Phone",
-  "Accessory",
-  "Wearable",
-  "Camera",
+const CATEGORY_OPTIONS = ["PC", "Laptop", "Gaming", "Audio", "Phone", "Accessory", "Wearable", "Camera"];
+const SUB_CATEGORIES = [
+  ["TopSeller", "Top Seller"],
+  ["NewArrival", "New Arrival"],
+  ["Sale", "Sale"],
 ];
-
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active", color: "success" },
+  { value: "coming_soon", label: "Coming Soon", color: "warning" },
+  { value: "discontinued", label: "Discontinued", color: "default" },
+];
 const EMPTY_FORM = {
   id: "",
   name: "",
@@ -65,14 +65,35 @@ const EMPTY_FORM = {
   reviewCount: "",
   bestSeller: false,
 };
+const CARD_SX = {
+  borderRadius: 4,
+  border: "1px solid",
+  borderColor: "divider",
+  boxShadow: "0 16px 40px rgba(15, 23, 42, 0.06)",
+};
 
-const STATUS_OPTIONS = [
-  { value: "active", label: "Active", color: "success" },
-  { value: "coming_soon", label: "Coming Soon", color: "warning" },
-  { value: "discontinued", label: "Discontinued", color: "default" },
-];
+const csvToJson = (value) => JSON.stringify(value.split(",").map((item) => item.trim()).filter(Boolean));
+const statusMeta = (status = "active") => STATUS_OPTIONS.find((option) => option.value === status) || STATUS_OPTIONS[0];
+const normalizeCategories = (category) => (Array.isArray(category) ? category : [category].filter(Boolean));
+const toEditForm = (item) => ({
+  ...EMPTY_FORM,
+  id: item._id,
+  name: item.name || "",
+  description: item.description || "",
+  status: item.status || "active",
+  price: item.price ?? "",
+  originalPrice: item.originalPrice ?? "",
+  stockQuantity: item.stockQuantity ?? 0,
+  category: normalizeCategories(item.category),
+  subCategory: item.subCategory || "TopSeller",
+  models: Array.isArray(item.models) ? item.models.join(", ") : "",
+  tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
+  rating: item.rating ?? "",
+  reviewCount: item.reviewCount ?? "",
+  bestSeller: Boolean(item.bestSeller),
+});
 
-const List = ({ token }) => {
+export default function List({ token }) {
   const [list, setList] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -81,108 +102,56 @@ const List = ({ token }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
 
-  const fetchList = useCallback(
-    async (nextPage = page, nextRowsPerPage = rowsPerPage) => {
-      try {
-        const response = await axios.get(backendUrl + "/api/product/list", {
-          params: {
-            page: nextPage + 1,
-            limit: nextRowsPerPage,
-          },
-        });
-
-        if (response.data.success) {
-          setList(response.data.products);
-          setTotalProducts(response.data.pagination?.totalProducts || 0);
-        } else {
-          toast.error(response.data.message);
-        }
-      } catch (error) {
-        toast.error(error.message);
-      }
-    },
-    [page, rowsPerPage]
-  );
-
-  const removeProduct = async (id) => {
+  const fetchList = useCallback(async (nextPage = page, nextRowsPerPage = rowsPerPage) => {
     try {
-      const response = await axios.post(
-        backendUrl + "/api/product/remove",
-        { id },
-        { headers: { token } }
-      );
+      const response = await axios.get(backendUrl + "/api/product/list", {
+        params: { page: nextPage + 1, limit: nextRowsPerPage },
+      });
 
       if (response.data.success) {
-        toast.success(response.data.message);
-        const isLastItemOnPage = list.length === 1 && page > 0;
-        const nextPage = isLastItemOnPage ? page - 1 : page;
-
-        if (isLastItemOnPage) {
-          setPage(nextPage);
-        }
-
-        await fetchList(nextPage, rowsPerPage);
+        setList(response.data.products);
+        setTotalProducts(response.data.pagination?.totalProducts || 0);
       } else {
         toast.error(response.data.message);
       }
     } catch (error) {
       toast.error(error.message);
     }
-  };
+  }, [page, rowsPerPage]);
 
-  const handleChangePage = async (_, nextPage) => {
-    setPage(nextPage);
+  const removeProduct = async (id) => {
+    try {
+      const response = await axios.post(backendUrl + "/api/product/remove", { id }, { headers: { token } });
+      if (!response.data.success) return toast.error(response.data.message);
+
+      toast.success(response.data.message);
+      const nextPage = list.length === 1 && page > 0 ? page - 1 : page;
+      if (nextPage !== page) setPage(nextPage);
+      await fetchList(nextPage, rowsPerPage);
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   const handleChangeRowsPerPage = (event) => {
-    const nextRowsPerPage = Number(event.target.value);
-
-    setRowsPerPage(nextRowsPerPage);
+    setRowsPerPage(Number(event.target.value));
     setPage(0);
   };
-
   const startEdit = (item) => {
     setEditingProductId(item._id);
-    setEditForm({
-      id: item._id,
-      name: item.name || "",
-      description: item.description || "",
-      status: item.status || "active",
-      price: item.price ?? "",
-      originalPrice: item.originalPrice ?? "",
-      stockQuantity: item.stockQuantity ?? 0,
-      category: Array.isArray(item.category)
-        ? item.category
-        : [item.category].filter(Boolean),
-      subCategory: item.subCategory || "TopSeller",
-      models: Array.isArray(item.models) ? item.models.join(", ") : "",
-      tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
-      rating: item.rating ?? "",
-      reviewCount: item.reviewCount ?? "",
-      bestSeller: Boolean(item.bestSeller),
-    });
+    setEditForm(toEditForm(item));
   };
-
   const cancelEdit = () => {
     setEditingProductId("");
     setEditForm(EMPTY_FORM);
   };
-
-  const handleEditChange = (field, value) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const toggleCategory = (categoryOption) => {
+  const handleEditChange = (field, value) => setEditForm((prev) => ({ ...prev, [field]: value }));
+  const toggleCategory = (category) => {
     setEditForm((prev) => {
-      const hasCategory = prev.category.includes(categoryOption);
-      const nextCategories = hasCategory
-        ? prev.category.filter((item) => item !== categoryOption)
-        : [...prev.category, categoryOption];
-
-      return {
-        ...prev,
-        category: nextCategories.length ? nextCategories : prev.category,
-      };
+      const next = prev.category.includes(category)
+        ? prev.category.filter((item) => item !== category)
+        : [...prev.category, category];
+      return { ...prev, category: next.length ? next : prev.category };
     });
   };
 
@@ -192,30 +161,10 @@ const List = ({ token }) => {
       const response = await axios.post(
         backendUrl + "/api/product/update",
         {
-          id: editForm.id,
-          name: editForm.name,
-          description: editForm.description,
-          status: editForm.status,
-          price: editForm.price,
-          originalPrice: editForm.originalPrice,
-          stockQuantity: editForm.stockQuantity,
+          ...editForm,
           category: JSON.stringify(editForm.category),
-          subCategory: editForm.subCategory,
-          models: JSON.stringify(
-            editForm.models
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean)
-          ),
-          tags: JSON.stringify(
-            editForm.tags
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean)
-          ),
-          rating: editForm.rating,
-          reviewCount: editForm.reviewCount,
-          bestSeller: editForm.bestSeller,
+          models: csvToJson(editForm.models),
+          tags: csvToJson(editForm.tags),
         },
         { headers: { token } }
       );
@@ -235,139 +184,47 @@ const List = ({ token }) => {
   };
 
   useEffect(() => {
-    const loadList = async () => {
-      await fetchList(page, rowsPerPage);
-    };
-
-    loadList();
+    fetchList(page, rowsPerPage);
   }, [fetchList, page, rowsPerPage]);
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight={800}>
-          Product List
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.75 }}>
-          Review inventory, update product records, and clean up older listings.
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Product List"
+        subtitle="Review inventory, update product records, and clean up older listings."
+      />
 
       <TablePagination
         component="div"
         count={totalProducts}
         page={page}
-        onPageChange={handleChangePage}
+        onPageChange={(_, nextPage) => setPage(nextPage)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         rowsPerPageOptions={[10, 25, 50]}
       />
 
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: 4,
-          border: "1px solid",
-          borderColor: "divider",
-          boxShadow: "0 16px 40px rgba(15, 23, 42, 0.06)",
-        }}
-      >
+      <Card elevation={0} sx={CARD_SX}>
         <CardContent sx={{ p: 0 }}>
           <TableContainer>
             <Table sx={{ minWidth: 820 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: "grey.50" }}>
-                  <TableCell>Image</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Price</TableCell>
-                  <TableCell align="right">Stock</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  {["Image", "Name", "Category", "Status", "Price", "Stock", "Actions"].map((heading) => (
+                    <TableCell key={heading} align={["Price", "Stock"].includes(heading) ? "right" : heading === "Actions" ? "center" : "left"}>
+                      {heading}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {list.map((item) => (
-                  <TableRow hover key={item._id}>
-                    <TableCell sx={{ width: 88 }}>
-                      <Box
-                        component="img"
-                        src={item.image?.[0]}
-                        alt={item.name}
-                        sx={{
-                          width: 52,
-                          height: 52,
-                          objectFit: "cover",
-                          borderRadius: 2.5,
-                          border: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Stack spacing={0.5}>
-                        <Typography fontWeight={700}>{item.name}</Typography>
-                        {item.bestSeller && (
-                          <Chip
-                            icon={<SellSharpIcon />}
-                            label="Best Seller"
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            sx={{ width: "fit-content" }}
-                          />
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Typography color="text.secondary">
-                        {Array.isArray(item.category)
-                          ? item.category.join(", ")
-                          : item.category}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={
-                          STATUS_OPTIONS.find(
-                            (option) =>
-                              option.value === (item.status || "active")
-                          )?.label || "Active"
-                        }
-                        color={
-                          STATUS_OPTIONS.find(
-                            (option) =>
-                              option.value === (item.status || "active")
-                          )?.color || "default"
-                        }
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {currency}
-                      {item.price}
-                    </TableCell>
-                    <TableCell align="right">{item.stockQuantity}</TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="Edit">
-                        <IconButton
-                          onClick={() => startEdit(item)}
-                          color="primary"
-                        >
-                          <EditSharpIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          onClick={() => removeProduct(item._id)}
-                          color="error"
-                        >
-                          <DeleteOutlineSharpIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
+                  <ProductRow
+                    key={item._id}
+                    item={item}
+                    onEdit={startEdit}
+                    onDelete={removeProduct}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -375,212 +232,136 @@ const List = ({ token }) => {
         </CardContent>
       </Card>
 
-      <Dialog
+      <EditProductDialog
         open={Boolean(editingProductId)}
-        onClose={cancelEdit}
-        fullWidth
-        maxWidth="md"
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" fontWeight={800}>
-            Edit Product
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Update pricing, stock, content, and merchandising details.
-          </Typography>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ mt: 0.25 }}>
-            <Grid item xs={12}>
-              <TextField
-                label="Product Name"
-                value={editForm.name}
-                onChange={(e) => handleEditChange("name", e.target.value)}
-                fullWidth
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Description"
-                value={editForm.description}
-                onChange={(e) =>
-                  handleEditChange("description", e.target.value)
-                }
-                fullWidth
-                multiline
-                minRows={4}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Price"
-                type="number"
-                value={editForm.price}
-                onChange={(e) => handleEditChange("price", e.target.value)}
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">{currency}</InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Original Price"
-                type="number"
-                value={editForm.originalPrice}
-                onChange={(e) =>
-                  handleEditChange("originalPrice", e.target.value)
-                }
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">{currency}</InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  value={editForm.status}
-                  onChange={(e) => handleEditChange("status", e.target.value)}
-                >
-                  {STATUS_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Stock Quantity"
-                type="number"
-                value={editForm.stockQuantity}
-                onChange={(e) =>
-                  handleEditChange("stockQuantity", e.target.value)
-                }
-                fullWidth
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Sub Category</InputLabel>
-                <Select
-                  label="Sub Category"
-                  value={editForm.subCategory}
-                  onChange={(e) =>
-                    handleEditChange("subCategory", e.target.value)
-                  }
-                >
-                  <MenuItem value="TopSeller">Top Seller</MenuItem>
-                  <MenuItem value="NewArrival">New Arrival</MenuItem>
-                  <MenuItem value="Sale">Sale</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={editForm.bestSeller}
-                    onChange={() =>
-                      handleEditChange("bestSeller", !editForm.bestSeller)
-                    }
-                  />
-                }
-                label="Best Seller"
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                Categories
-              </Typography>
-              <FormGroup row>
-                {CATEGORY_OPTIONS.map((option) => (
-                  <FormControlLabel
-                    key={option}
-                    control={
-                      <Checkbox
-                        checked={editForm.category.includes(option)}
-                        onChange={() => toggleCategory(option)}
-                      />
-                    }
-                    label={option}
-                  />
-                ))}
-              </FormGroup>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Models"
-                value={editForm.models}
-                onChange={(e) => handleEditChange("models", e.target.value)}
-                fullWidth
-                placeholder="Comma separated"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Tags"
-                value={editForm.tags}
-                onChange={(e) => handleEditChange("tags", e.target.value)}
-                fullWidth
-                placeholder="Comma separated"
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Rating"
-                type="number"
-                value={editForm.rating}
-                onChange={(e) => handleEditChange("rating", e.target.value)}
-                inputProps={{ min: 0, max: 5, step: 0.1 }}
-                fullWidth
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Review Count"
-                type="number"
-                value={editForm.reviewCount}
-                onChange={(e) =>
-                  handleEditChange("reviewCount", e.target.value)
-                }
-                inputProps={{ min: 0 }}
-                fullWidth
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={cancelEdit} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={saveProduct} variant="contained" disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        form={editForm}
+        isSaving={isSaving}
+        onCancel={cancelEdit}
+        onChange={handleEditChange}
+        onToggleCategory={toggleCategory}
+        onSave={saveProduct}
+      />
     </Box>
   );
-};
+}
 
-export default List;
+function ProductRow({ item, onEdit, onDelete }) {
+  const status = statusMeta(item.status);
+
+  return (
+    <TableRow hover>
+      <TableCell sx={{ width: 88 }}>
+        <Box component="img" src={item.image?.[0]} alt={item.name} sx={{ width: 52, height: 52, objectFit: "cover", borderRadius: 2.5, border: "1px solid", borderColor: "divider" }} />
+      </TableCell>
+      <TableCell>
+        <Stack spacing={0.5}>
+          <Typography fontWeight={700}>{item.name}</Typography>
+          {item.bestSeller && <Chip icon={<SellSharpIcon />} label="Best Seller" size="small" color="warning" variant="outlined" sx={{ width: "fit-content" }} />}
+        </Stack>
+      </TableCell>
+      <TableCell>
+        <Typography color="text.secondary">{normalizeCategories(item.category).join(", ")}</Typography>
+      </TableCell>
+      <TableCell>
+        <Chip label={status.label} color={status.color} size="small" variant="outlined" />
+      </TableCell>
+      <TableCell align="right">{currency}{item.price}</TableCell>
+      <TableCell align="right">{item.stockQuantity}</TableCell>
+      <TableCell align="center">
+        <Tooltip title="Edit">
+          <IconButton onClick={() => onEdit(item)} color="primary"><EditSharpIcon /></IconButton>
+        </Tooltip>
+        <Tooltip title="Delete">
+          <IconButton onClick={() => onDelete(item._id)} color="error"><DeleteOutlineSharpIcon /></IconButton>
+        </Tooltip>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function EditProductDialog({ open, form, isSaving, onCancel, onChange, onToggleCategory, onSave }) {
+  const textFields = [
+    { field: "name", label: "Product Name", xs: 12 },
+    { field: "description", label: "Description", xs: 12, multiline: true, minRows: 4 },
+    { field: "price", label: "Price", xs: 12, md: 6, money: true },
+    { field: "originalPrice", label: "Original Price", xs: 12, md: 6, money: true },
+    { field: "stockQuantity", label: "Stock Quantity", xs: 12, md: 6, type: "number" },
+    { field: "models", label: "Models", xs: 12, md: 6, placeholder: "Comma separated" },
+    { field: "tags", label: "Tags", xs: 12, md: 6, placeholder: "Comma separated" },
+    { field: "rating", label: "Rating", xs: 12, md: 6, type: "number", inputProps: { min: 0, max: 5, step: 0.1 } },
+    { field: "reviewCount", label: "Review Count", xs: 12, md: 6, type: "number", inputProps: { min: 0 } },
+  ];
+
+  return (
+    <Dialog open={open} onClose={onCancel} fullWidth maxWidth="md">
+      <DialogTitle sx={{ pb: 1 }}>
+        <Typography variant="h6" fontWeight={800}>Edit Product</Typography>
+        <Typography variant="body2" color="text.secondary">Update pricing, stock, content, and merchandising details.</Typography>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Grid container spacing={2} sx={{ mt: 0.25 }}>
+          {textFields.map(({ field, label, xs, md, money, ...props }) => (
+            <Grid item xs={xs} md={md} key={field}>
+              <TextField
+                label={label}
+                value={form[field]}
+                onChange={(event) => onChange(field, event.target.value)}
+                fullWidth
+                type={props.type || (money ? "number" : undefined)}
+                InputProps={money ? { startAdornment: <InputAdornment position="start">{currency}</InputAdornment> } : undefined}
+                {...props}
+              />
+            </Grid>
+          ))}
+          <Grid item xs={12} md={6}>
+            <OptionSelect label="Status" value={form.status} options={STATUS_OPTIONS.map(({ value, label }) => [value, label])} onChange={(value) => onChange("status", value)} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <OptionSelect label="Sub Category" value={form.subCategory} options={SUB_CATEGORIES} onChange={(value) => onChange("subCategory", value)} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <FormControlLabel control={<Checkbox checked={form.bestSeller} onChange={() => onChange("bestSeller", !form.bestSeller)} />} label="Best Seller" />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Categories</Typography>
+            <FormGroup row>
+              {CATEGORY_OPTIONS.map((option) => (
+                <FormControlLabel
+                  key={option}
+                  control={<Checkbox checked={form.category.includes(option)} onChange={() => onToggleCategory(option)} />}
+                  label={option}
+                />
+              ))}
+            </FormGroup>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onCancel} color="inherit">Cancel</Button>
+        <Button onClick={onSave} variant="contained" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function PageHeader({ title, subtitle }) {
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h4" fontWeight={800}>{title}</Typography>
+      <Typography color="text.secondary" sx={{ mt: 0.75 }}>{subtitle}</Typography>
+    </Box>
+  );
+}
+
+function OptionSelect({ label, value, options, onChange }) {
+  return (
+    <FormControl fullWidth>
+      <InputLabel>{label}</InputLabel>
+      <Select label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map(([optionValue, optionLabel]) => (
+          <MenuItem key={optionValue} value={optionValue}>{optionLabel}</MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}

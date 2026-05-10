@@ -5,15 +5,16 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartSidebar from "./components/CartSidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
+
 import ChatbotWidget from "./components/ChatbotWidget";
 
 import HomePage from "./pages/HomePage";
-import AllProductsPage from "./pages/AllProductsPage";
+import AllProductsPage from "./pages/AllProductPage";
 import ProductPage from "./pages/ProductPage";
 import AuthPage from "./pages/AuthPage";
-import CheckoutPage from "./pages/CheckoutPage";
+import CheckoutPage from "./pages/Checkout";
 import StripeVerifyPage from "./pages/StripeVerifyPage";
-import OrdersPage, { OrderDetailPage } from "./pages/OrdersPage";
+import OrdersPage, { OrderDetailPage } from "./pages/OrderPage";
 import SellerDashboard from "./pages/SellerDashboard";
 import {
   AboutPage,
@@ -21,6 +22,8 @@ import {
   AccountPage,
   ForgotPasswordPage,
 } from "./pages/MiscPages";
+import OAuthCallback from "./pages/OAuthCallback";
+
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -51,6 +54,7 @@ export default function App() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/oauth-callback" element={<OAuthCallback />} />
               <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
 
               {/* Protected */}

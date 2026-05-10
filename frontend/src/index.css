@@ -33,6 +33,7 @@ body {
     radial-gradient(circle at top, rgba(168, 85, 247, 0.08), transparent 28%),
     linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   color: #0f172a;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
 #root {
@@ -77,16 +78,21 @@ body {
 
 .chatbot-shell .cs-message-input {
   border-top: 1px solid rgba(226, 232, 240, 0.95);
-  background: rgba(255, 255, 255, 0.98);
+  background: transparent;
 }
 
 .chatbot-shell .cs-message-input__content-editor-wrapper {
-  background: rgb(248 250 252);
+  background: transparent;
   border: 1px solid rgb(226 232 240);
+}
+
+.chatbot-shell .cs-message-input__content-editor-container {
+  background: transparent !important;
 }
 
 .chatbot-shell .cs-message-input__content-editor {
   font-family: var(--font-body);
+  background: transparent !important;
 }
 
 .chatbot-shell .cs-button--send {
@@ -115,8 +121,13 @@ body {
 .chatbot-markdown {
   color: #0f172a;
   font-size: 0.92rem;
-  line-height: 1.6;
+  line-height: 1.45;
   word-break: break-word;
+}
+
+.chatbot-answer-flow {
+  display: grid;
+  gap: 0.55rem;
 }
 
 .chatbot-markdown-user {
@@ -135,12 +146,27 @@ body {
 .chatbot-markdown ul,
 .chatbot-markdown ol,
 .chatbot-markdown pre {
-  margin: 0.35rem 0;
+  margin: 0.2rem 0;
 }
 
 .chatbot-markdown ul,
 .chatbot-markdown ol {
   padding-left: 1.1rem;
+}
+
+.chatbot-markdown li {
+  margin: 0.1rem 0;
+}
+
+.chatbot-product-summary {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.chatbot-product-summary p,
+.chatbot-product-summary ul,
+.chatbot-product-summary ol {
+  margin: 0.12rem 0;
 }
 
 .chatbot-markdown code {
@@ -154,6 +180,159 @@ body {
   display: block;
   overflow-x: auto;
   padding: 0.75rem;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top, rgba(45, 212, 191, 0.08), transparent 25%),
+    linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  color: #e5eef9;
+}
+
+html[data-theme="dark"] .nav-link.active {
+  color: var(--color-brand-300);
+}
+
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-white\/90,
+html[data-theme="dark"] .bg-white\/95,
+html[data-theme="dark"] .bg-white\/98 {
+  background-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+html[data-theme="dark"] .bg-gray-50,
+html[data-theme="dark"] .bg-gray-50\/60,
+html[data-theme="dark"] .bg-gray-50\/90,
+html[data-theme="dark"] .bg-gray-100 {
+  background-color: rgba(15, 23, 42, 0.72) !important;
+}
+
+html[data-theme="dark"] .bg-gray-800 {
+  background-color: #111c33 !important;
+}
+
+html[data-theme="dark"] .bg-gray-900,
+html[data-theme="dark"] .bg-gray-900\/90 {
+  background-color: #020617 !important;
+}
+
+html[data-theme="dark"] .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .text-gray-500,
+html[data-theme="dark"] .text-gray-400 {
+  color: #8ea3bd !important;
+}
+
+html[data-theme="dark"] .border-gray-50,
+html[data-theme="dark"] .border-gray-100,
+html[data-theme="dark"] .border-gray-200,
+html[data-theme="dark"] .border-gray-300 {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+html[data-theme="dark"] .hover\:bg-gray-50:hover,
+html[data-theme="dark"] .hover\:bg-gray-100:hover {
+  background-color: rgba(30, 41, 59, 0.92) !important;
+}
+
+html[data-theme="dark"] .hover\:text-brand-600:hover,
+html[data-theme="dark"] .hover\:text-brand-700:hover {
+  color: #c4b5fd !important;
+}
+
+html[data-theme="dark"] .hover\:border-brand-200:hover,
+html[data-theme="dark"] .hover\:border-brand-300:hover,
+html[data-theme="dark"] .hover\:border-brand-400:hover {
+  border-color: rgba(196, 181, 253, 0.46) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.26);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #7c93ae;
+}
+
+html[data-theme="dark"] .theme-toggle {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.26) !important;
+}
+
+html[data-theme="dark"] header {
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.24);
+}
+
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .chatbot-product-card {
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.18);
+}
+
+html[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #162235 25%, #223149 50%, #162235 75%);
+  background-size: 200% 100%;
+}
+
+html[data-theme="dark"] .chatbot-shell {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.94);
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message-list {
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 28%),
+    radial-gradient(circle at top left, rgba(168, 85, 247, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message-input {
+  border-top-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message-input__content-editor-wrapper {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message-input__content-editor-container,
+html[data-theme="dark"] .chatbot-shell .cs-message-input__content-editor {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message--incoming .cs-message__content {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.24);
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-message--incoming .chatbot-markdown,
+html[data-theme="dark"] .chatbot-shell .cs-message-input__content-editor {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .chatbot-shell .cs-button--send {
+  color: #c4b5fd;
 }
 
 @keyframes shimmer {

@@ -2,6 +2,9 @@ import validator from "validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import userModel from "../models/userModel.js";
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET);
@@ -33,6 +36,37 @@ const loginUser = async (req, res) => {
 
     const token = createToken(user._id);
     res.json({ success: true, token, user: sanitizeUser(user) });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { name, email, sub: googleId } = ticket.getPayload();
+
+    let user = await userModel.findOne({ email });
+
+    if (!user) {
+      user = new userModel({
+        name,
+        email,
+        googleId,
+        role: "customer",
+      });
+      await user.save();
+    } else if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
+    }
+
+    const jwtToken = createToken(user._id);
+    res.json({ success: true, token: jwtToken, user: sanitizeUser(user) });
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
@@ -142,4 +176,4 @@ const adminLogin = async (req, res) => {
   }
 };
 
-export { loginUser, registerUser, adminLogin, getCurrentUser, listUsers };
+export { loginUser, registerUser, adminLogin, googleAuth, getCurrentUser, listUsers };

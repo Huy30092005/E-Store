@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { Search, ShoppingCart, User, X } from "lucide-react";
+import { Moon, Search, ShoppingCart, Sun, User, X } from "lucide-react";
 
 export default function Navbar() {
-  const { user, logout, cartCount, setCartOpen } = useApp();
+  const { user, logout, cartCount, setCartOpen, theme, toggleTheme } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const navigate = useNavigate();
+  const isDark = theme === "dark";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -108,6 +109,16 @@ export default function Navbar() {
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="theme-toggle inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/80 text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-600"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+          </button>
+
           {/* Cart */}
           <button
             onClick={() => setCartOpen(true)}
@@ -177,6 +188,14 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-3">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-600"
+          >
+            <span>{isDark ? "Light mode" : "Dark mode"}</span>
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           {[
             { to: "/", label: "Home" },
             { to: "/all-products", label: "Shop" },
