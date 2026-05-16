@@ -12,24 +12,9 @@ import passport from "./config/passport.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
-const defaultOrigins = ["http://localhost:5173", "http://localhost:5174"];
-const envOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
+app.use(cors());
 app.use(express.json());
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked origin: ${origin}`));
-  },
-  credentials: true,
-}));
 
 connectCloudinary();
 app.use(passport.initialize()); 
