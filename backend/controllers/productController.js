@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { promises as fs } from "fs";
 import productModel from "../models/productModel.js";
 import axios from "axios";
 
@@ -44,6 +45,16 @@ const parseList = (value) => {
 };
 
 const parseModels = (value) => parseList(value);
+
+const removeTempFile = async (filePath) => {
+  if (!filePath) return;
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    console.error("Failed to remove temp upload:", error.message);
+  }
+};
 
 const buildProductData = (payload, image = [], fallbackProduct = null) => {
   const {
@@ -114,10 +125,14 @@ const addProduct = async (req, res) => {
 
     let imageUrl = await Promise.all(
       images.map(async (item) => {
-        let result = await cloudinary.uploader.upload(item.path, {
-          resource_type: "image",
-        });
-        return result.secure_url;
+        try {
+          const result = await cloudinary.uploader.upload(item.path, {
+            resource_type: "image",
+          });
+          return result.secure_url;
+        } finally {
+          await removeTempFile(item.path);
+        }
       })
     );
 
@@ -251,18 +266,16 @@ export {
   singleProduct,
   updateProduct,
 };
-<<<<<<< HEAD
-=======
 
 
 // CREATE
 export const createProductDB = async (req, res) => {
   try {
-    const product = await Product.create(req.body);
+    const product = await productModel.create(req.body);
     res.status(201).json(product);
 
     // trigger after responding so the client isn't kept waiting
-    await syncVector("post", { product: product.toObject() });
+    void syncVectorDB("post", { product: product.toObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -272,11 +285,11 @@ export const createProductDB = async (req, res) => {
 // UPDATE
 export const updateProductDB = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const product = await productModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
 
-    await syncVector("post", { product: product.toObject() });
+    void syncVectorDB("post", { product: product.toObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -286,11 +299,11 @@ export const updateProductDB = async (req, res) => {
 // DELETE
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await productModel.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product deleted" });
 
-    await syncVector("delete", { product_id: req.params.id });
+    void syncVectorDB("delete", { product_id: req.params.id });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -302,7 +315,7 @@ export const addComment = async (req, res) => {
   try {
     const { productId } = req.params;
     const { content, rating } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     if (!content) {
       return res.status(400).json({ message: "Content is required" });
@@ -372,7 +385,7 @@ export const getComments = async (req, res) => {
 export const deleteComment = async (req, res) => {
   try {
     const { productId, commentId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     const product = await productModel.findById(productId);
     if (!product) {
@@ -410,5 +423,3 @@ export const deleteComment = async (req, res) => {
 };
 
 
-export { addProduct, listProduct, removeProduct, singleProduct, updateProduct };
->>>>>>> d3a3a03998afb5679ba8e055162b395a8c568b95

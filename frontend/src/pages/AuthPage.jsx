@@ -160,16 +160,7 @@ export default function AuthPage() {
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-xs mt-6">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => setIsLogin((v) => !v)}
-              className="text-brand-600 font-semibold hover:underline"
-            >
-              {isLogin ? "Sign up" : "Sign in"}
-            </button>
-          </p>
-           {/* Google OAuth Button */}
+          {/* Google OAuth Button */}
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
@@ -184,9 +175,19 @@ export default function AuthPage() {
             Continue with Google
           </button>
         </div>
+
+          <p className="text-center text-gray-500 text-xs mt-6">
+            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            <button
+              onClick={() => setIsLogin((v) => !v)}
+              className="text-brand-600 font-semibold hover:underline"
+            >
+              {isLogin ? "Sign up" : "Sign in"}
+            </button>
+          </p>
+           
         </div>
 
-        
       </div>
     </main>
   );

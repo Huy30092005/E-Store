@@ -46,7 +46,14 @@ app.get("/", (_req, res) => res.send("API working"));
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(port, () => console.log("Server running on PORT " + port));
+    const server = app.listen(port, () =>
+      console.log("Server running on PORT " + port)
+    );
+
+    server.on("error", (error) => {
+      console.log("Failed to start server", error.message);
+      process.exit(1);
+    });
   } catch (error) {
     console.log("Failed to start server", error);
     process.exit(1);

@@ -110,7 +110,7 @@ async def run_repl(database: str, show_schema_on_start: bool):
         return
     print(c(GREEN, "OK"))
     print(c(DIM,   f"  Database : {database}"))
-    print(c(DIM,   f"  Model    : {os.getenv('OPENAI_MODEL', 'gpt-4.1-nano')}"))
+    print(c(DIM,   f"  Model    : {os.getenv('OPENAI_MODEL', 'gpt-4o-mini')}"))
 
     if show_schema_on_start:
         await print_schema(agent, database)

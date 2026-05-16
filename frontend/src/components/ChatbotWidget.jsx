@@ -7,7 +7,7 @@ import {
   MessageInput,
   TypingIndicator,
 } from "@chatscope/chat-ui-kit-react";
-import { MessageCircle, Sparkles, X } from "lucide-react";
+import { ArrowUpRight, MessageCircle, Sparkles, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
 import { getChatbotSessionId, sendChatMessage } from "../services/chatbot";
@@ -20,6 +20,52 @@ const WELCOME_MESSAGE = {
   content:
     "Hi! I'm your SimTech assistant. Ask me about products, recommendations, orders, or store data.",
   sentTime: "just now",
+};
+const GENERIC_PRODUCT_NAME_TOKENS = new Set([
+  "active",
+  "black",
+  "camera",
+  "desktop",
+  "gaming",
+  "laptop",
+  "phone",
+  "silver",
+  "tablet",
+  "white",
+]);
+const PRODUCT_TYPE_ALIASES = {
+  laptop: ["laptop", "laptops"],
+  phone: ["phone", "phones", "smartphone", "smartphones"],
+  tablet: ["tablet", "tablets"],
+  camera: ["camera", "cameras"],
+  wearable: ["wearable", "wearables", "watch", "watches"],
+  accessory: ["accessory", "accessories"],
+  audio: ["audio", "headphone", "headphones", "speaker", "speakers"],
+  pc: ["pc", "pcs", "desktop", "desktops", "computer", "computers"],
+};
+const PRODUCT_TYPE_CATEGORIES = {
+  laptop: "laptop",
+  phone: "phone",
+  tablet: "tablet",
+  camera: "camera",
+  wearable: "wearable",
+  accessory: "accessory",
+  audio: "audio",
+  pc: "pc",
+};
+const USAGE_ALIASES = {
+  gaming: ["gaming", "game", "games", "gamer", "gamers"],
+};
+const USAGE_CATEGORIES = {
+  gaming: "gaming",
+};
+const MARKDOWN_COMPONENTS = {
+  img: () => null,
+  a: ({ children, href }) => (
+    <a href={href} target="_blank" rel="noreferrer">
+      {children}
+    </a>
+  ),
 };
 
 function formatTime(date) {
@@ -37,38 +83,182 @@ function normalizeText(value = "") {
     .trim();
 }
 
-function findRelatedProducts(answer, products) {
-  const normalizedAnswer = normalizeText(answer);
+function getRequestedProductType(question = "") {
+  const normalizedQuestion = ` ${normalizeText(question)} `;
 
-  if (!normalizedAnswer || products.length === 0) {
+  return Object.entries(PRODUCT_TYPE_ALIASES).find(([, aliases]) =>
+    aliases.some((alias) => normalizedQuestion.includes(` ${alias} `))
+  )?.[0];
+}
+
+function getRequestedUsage(question = "") {
+  const normalizedQuestion = ` ${normalizeText(question)} `;
+
+  return Object.entries(USAGE_ALIASES).find(([, aliases]) =>
+    aliases.some((alias) => normalizedQuestion.includes(` ${alias} `))
+  )?.[0];
+}
+
+function getProductCategories(product) {
+  return [
+    ...(Array.isArray(product?.categories) ? product.categories : []),
+    product?.category,
+    ...(Array.isArray(product?.tags) ? product.tags : []),
+  ]
+    .filter(Boolean)
+    .map(normalizeText);
+}
+
+function productMatchesRequestedType(product, productType) {
+  if (!productType) {
+    return true;
+  }
+
+  const expectedCategory = PRODUCT_TYPE_CATEGORIES[productType];
+  const categories = getProductCategories(product);
+
+  if (categories.includes(expectedCategory)) {
+    return true;
+  }
+
+  const aliases = PRODUCT_TYPE_ALIASES[productType] || [];
+  const searchableText = normalizeText(`${product?.name || ""} ${product?.subCategory || ""}`);
+
+  return aliases.some((alias) => searchableText.includes(alias));
+}
+
+function productMatchesRequestedUsage(product, usage) {
+  if (!usage) {
+    return true;
+  }
+
+  const expectedCategory = USAGE_CATEGORIES[usage];
+  const categories = getProductCategories(product);
+
+  if (categories.includes(expectedCategory)) {
+    return true;
+  }
+
+  const aliases = USAGE_ALIASES[usage] || [];
+  const searchableText = normalizeText(`${product?.name || ""} ${product?.subCategory || ""}`);
+
+  return aliases.some((alias) => searchableText.includes(alias));
+}
+
+function getProductNameTokens(product) {
+  return normalizeText(product?.name)
+    .split(" ")
+    .filter((token) => token.length >= 2);
+}
+
+function isSpecificProductPhrase(phrase) {
+  return phrase.split(" ").some((token) => token.length >= 4 || /\d/.test(token));
+}
+
+function getProductNamePhrases(product) {
+  const tokens = getProductNameTokens(product);
+
+  return tokens
+    .slice(0, -1)
+    .map((token, index) => `${token} ${tokens[index + 1]}`)
+    .filter(isSpecificProductPhrase);
+}
+
+function scoreProductMention(text, product) {
+  const normalizedText = normalizeText(text);
+  const normalizedName = normalizeText(product?.name);
+
+  if (!normalizedText || !normalizedName) {
+    return 0;
+  }
+
+  if (normalizedText.includes(normalizedName)) {
+    return 100 + getProductNameTokens(product).length;
+  }
+
+  const matchingPhrases = getProductNamePhrases(product).filter((phrase) =>
+    normalizedText.includes(phrase)
+  );
+
+  if (matchingPhrases.length === 0) {
+    return 0;
+  }
+
+  return 50 + matchingPhrases.reduce((score, phrase) => score + phrase.length, 0);
+}
+
+function scoreProductQuestionMention(text, product) {
+  const normalizedText = normalizeText(text);
+  const normalizedName = normalizeText(product?.name);
+
+  if (!normalizedText || !normalizedName) {
+    return 0;
+  }
+
+  if (normalizedText.includes(normalizedName)) {
+    return 1000 + normalizedName.length;
+  }
+
+  const tokens = getProductNameTokens(product);
+  const firstPhrase = tokens.slice(0, 2).join(" ");
+
+  if (firstPhrase && normalizedText.includes(firstPhrase)) {
+    return 500 + firstPhrase.length;
+  }
+
+  const strongTokens = tokens.filter(
+    (token) =>
+      !GENERIC_PRODUCT_NAME_TOKENS.has(token) &&
+      (token.length >= 5 || /\d/.test(token))
+  );
+  const matchedTokens = strongTokens.filter((token) =>
+    normalizedText.includes(token)
+  );
+
+  if (matchedTokens.length === 0) {
+    return 0;
+  }
+
+  return 100 + matchedTokens.reduce((score, token) => score + token.length, 0);
+}
+
+function findRelatedProducts(answer, products, question = "") {
+  if (!Array.isArray(products) || products.length === 0) {
     return [];
   }
 
-  const answerTokens = new Set(normalizedAnswer.split(" ").filter((token) => token.length >= 3));
+  const requestedProductType = getRequestedProductType(question);
+  const requestedUsage = getRequestedUsage(question);
+  const hasProductIntent = requestedProductType || requestedUsage;
+  const candidateProducts = hasProductIntent
+    ? products.filter((product) =>
+        productMatchesRequestedType(product, requestedProductType) &&
+        productMatchesRequestedUsage(product, requestedUsage)
+      )
+    : products;
 
-  const scoredProducts = products
-    .map((product) => {
-      const normalizedName = normalizeText(product.name);
-      const nameTokens = normalizedName.split(" ").filter((token) => token.length >= 3);
-      const overlap = nameTokens.filter((token) => answerTokens.has(token)).length;
-      const fullNameMatch = normalizedName && normalizedAnswer.includes(normalizedName);
-      const startsWithPhrase = nameTokens.length >= 2 && normalizedAnswer.includes(nameTokens.slice(0, 2).join(" "));
+  if (hasProductIntent && candidateProducts.length === 0) {
+    return [];
+  }
 
-      let score = 0;
+  const questionMatches = candidateProducts
+    .map((product) => ({ product, score: scoreProductQuestionMention(question, product) }))
+    .filter(({ score }) => score > 0)
+    .sort((left, right) => right.score - left.score);
 
-      if (fullNameMatch) {
-        score += 10;
-      }
+  if (questionMatches.length > 0) {
+    return questionMatches.slice(0, 3).map(({ product }) => product);
+  }
 
-      if (startsWithPhrase) {
-        score += 4;
-      }
+  const normalizedAnswer = normalizeText(answer);
 
-      score += overlap;
+  if (!normalizedAnswer) {
+    return [];
+  }
 
-      return { product, score };
-    })
-    .filter(({ score }) => score >= 3)
+  const scoredProducts = candidateProducts
+    .map((product) => ({ product, score: scoreProductMention(normalizedAnswer, product) }))
+    .filter(({ score }) => score > 0)
     .sort((left, right) => right.score - left.score);
 
   return scoredProducts.slice(0, 3).map(({ product }) => product);
@@ -78,31 +268,6 @@ function getProductKey(product) {
   return product?._id || product?.id || product?.name;
 }
 
-function scoreProductLine(line, product) {
-  const normalizedLine = normalizeText(line);
-  const normalizedName = normalizeText(product.name);
-
-  if (!normalizedLine || !normalizedName) {
-    return 0;
-  }
-
-  const nameTokens = normalizedName.split(" ").filter((token) => token.length >= 3);
-  const overlap = nameTokens.filter((token) => normalizedLine.includes(token)).length;
-
-  if (normalizedLine.includes(normalizedName)) {
-    return 20 + overlap;
-  }
-
-  return overlap;
-}
-
-function findProductForLine(line, products, usedProductKeys) {
-  return products
-    .map((product) => ({ product, score: scoreProductLine(line, product) }))
-    .filter(({ product, score }) => score >= 2 && !usedProductKeys.has(getProductKey(product)))
-    .sort((left, right) => right.score - left.score)[0]?.product;
-}
-
 function compactMarkdown(text = "") {
   return text
     .replace(/[ \t]+\n/g, "\n")
@@ -110,109 +275,170 @@ function compactMarkdown(text = "") {
     .trim();
 }
 
-function cleanProductLine(line, productName) {
-  const escapedName = productName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const markerPattern = /^(\s*(?:[-*]|\d+[.)])\s*)/;
-  const namePattern = new RegExp(`^(?:\\*\\*)?${escapedName}(?:\\*\\*)?\\s*[:-]?\\s*`, "i");
+const PRODUCT_DETAIL_LABELS = new Set([
+  "available models",
+  "categories",
+  "description",
+  "features",
+  "key features",
+  "name",
+  "price",
+  "product name",
+  "rating",
+  "status",
+  "stock",
+  "stock quantity",
+]);
 
-  return line.replace(markerPattern, "").replace(namePattern, "").trim();
-}
+function parseDetailLine(line) {
+  const trimmedLine = line.trim();
+  const match = trimmedLine.match(/^(?:[-*]\s*)?(?:\*\*)?([^:*]+?)(?:\*\*)?\s*:\s*(.*)$/);
 
-function buildAssistantBlocks(answer, relatedProducts) {
-  if (!Array.isArray(relatedProducts) || relatedProducts.length === 0) {
-    return [{ type: "text", content: compactMarkdown(answer) }];
+  if (!match) {
+    return null;
   }
 
-  const blocks = [];
-  const textBuffer = [];
-  const usedProductKeys = new Set();
+  const label = match[1].trim();
+  const normalizedLabel = normalizeText(label);
 
-  const flushText = () => {
-    const content = compactMarkdown(textBuffer.join("\n"));
-    if (content) {
-      blocks.push({ type: "text", content });
-    }
-    textBuffer.length = 0;
+  if (!PRODUCT_DETAIL_LABELS.has(normalizedLabel)) {
+    return null;
+  }
+
+  return {
+    label,
+    value: match[2].trim(),
   };
+}
 
-  answer.split(/\r?\n/).forEach((line) => {
-    const product = findProductForLine(line, relatedProducts, usedProductKeys);
+function compactProductDetailsMarkdown(text = "") {
+  const lines = compactMarkdown(text).split(/\r?\n/);
+  const intro = [];
+  const details = [];
+  let currentDetail = null;
 
-    if (!product) {
-      textBuffer.push(line);
+  lines.forEach((line) => {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine) {
       return;
     }
 
-    flushText();
-    usedProductKeys.add(getProductKey(product));
-    blocks.push({
-      type: "product",
-      product,
-      content: compactMarkdown(cleanProductLine(line, product.name)),
-    });
+    const parsedDetail = parseDetailLine(trimmedLine);
+
+    if (parsedDetail) {
+      currentDetail = parsedDetail;
+      details.push(currentDetail);
+      return;
+    }
+
+    if (currentDetail) {
+      currentDetail.value = [currentDetail.value, trimmedLine]
+        .filter(Boolean)
+        .join(" ");
+      return;
+    }
+
+    intro.push(trimmedLine);
   });
 
-  flushText();
-
-  if (usedProductKeys.size === 0) {
-    return [{ type: "text", content: compactMarkdown(answer) }];
+  if (details.length < 2) {
+    return compactMarkdown(text);
   }
 
-  return blocks;
+  const detailLines = details.map(({ label, value }) =>
+    value ? `- **${label}:** ${value}` : `- **${label}:**`
+  );
+
+  return compactMarkdown([...intro, "", ...detailLines].join("\n"));
 }
 
-function ProductAnswerRow({ product, content }) {
+function lineLooksLikeProductLink(line, relatedProducts) {
+  const normalizedLine = normalizeText(line);
+
+  if (!normalizedLine || !/(view|link|here|product page|check out)/.test(normalizedLine)) {
+    return false;
+  }
+
+  return relatedProducts.some((product) => {
+    const normalizedName = normalizeText(product?.name);
+    return normalizedName && normalizedLine.includes(normalizedName);
+  });
+}
+
+function cleanAssistantAnswer(answer, relatedProducts) {
+  if (!Array.isArray(relatedProducts) || relatedProducts.length === 0) {
+    return compactProductDetailsMarkdown(answer);
+  }
+
+  return compactProductDetailsMarkdown(
+    answer
+      .split(/\r?\n/)
+      .filter((line) => !lineLooksLikeProductLink(line, relatedProducts))
+      .join("\n")
+  );
+}
+
+function ProductAnswerRow({ product }) {
   return (
     <Link
       to={`/product/${product._id}`}
-      className="chatbot-product-card flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 transition hover:border-brand-300 hover:shadow-md"
+      className="chatbot-product-card group flex w-full max-w-full min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 transition hover:border-brand-300 hover:shadow-md"
     >
       <img
         src={product.image}
         alt={product.name}
-        className="h-16 w-16 shrink-0 rounded-xl bg-slate-100 object-cover"
+        className="h-12 w-12 shrink-0 rounded-lg bg-slate-100 object-cover"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold uppercase text-brand-600 dark:text-brand-100">
-          {product.category || "Product"}
-        </p>
-        <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900 dark:text-brand-200">
+        <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-brand-200">
           {product.name}
         </p>
-        <p className="mt-0.5 text-sm font-medium text-slate-600">
-          ${Number(product.price || 0).toFixed(2)}
+        <p className="truncate text-xs font-medium text-slate-500">
+          {product.category || "Product"} - ${Number(product.price || 0).toFixed(2)}
         </p>
-        {content ? (
-          <div className="chatbot-markdown chatbot-product-summary mt-1.5 text-slate-700">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </div>
-        ) : null}
       </div>
+      <ArrowUpRight
+        size={16}
+        className="shrink-0 text-slate-400 transition group-hover:text-brand-600"
+      />
     </Link>
   );
 }
 
+function RelatedProductLinks({ products }) {
+  if (!Array.isArray(products) || products.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="chatbot-related-products">
+      <p className="chatbot-related-label">
+        {products.length === 1 ? "Related product" : "Related products"}
+      </p>
+      <div className="grid gap-2">
+        {products.map((product) => (
+          <ProductAnswerRow key={getProductKey(product)} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AssistantMessageContent({ message }) {
-  const blocks = buildAssistantBlocks(
+  const answer = cleanAssistantAnswer(
     message.model.message,
     message.model.relatedProducts
   );
 
   return (
     <div className="chatbot-answer-flow">
-      {blocks.map((block, index) =>
-        block.type === "product" ? (
-          <ProductAnswerRow
-            key={`${getProductKey(block.product)}-${index}`}
-            product={block.product}
-            content={block.content}
-          />
-        ) : (
-          <div key={`text-${index}`} className="chatbot-markdown">
-            <ReactMarkdown>{block.content}</ReactMarkdown>
-          </div>
-        )
-      )}
+      {answer ? (
+        <div className="chatbot-markdown">
+          <ReactMarkdown components={MARKDOWN_COMPONENTS}>{answer}</ReactMarkdown>
+        </div>
+      ) : null}
+      <RelatedProductLinks products={message.model.relatedProducts} />
     </div>
   );
 }
@@ -322,7 +548,7 @@ const ChatbotWidget = () => {
           sender: "SimTech Assistant",
           direction: "incoming",
           content: answer,
-          relatedProducts: findRelatedProducts(answer, productCatalog),
+          relatedProducts: findRelatedProducts(answer, productCatalog, userMessage),
           sentTime: formatTime(new Date()),
         },
       ]);
@@ -389,7 +615,9 @@ const ChatbotWidget = () => {
                       <Message.CustomContent>
                         {message.isUser ? (
                           <div className="chatbot-markdown chatbot-markdown-user">
-                            <ReactMarkdown>{message.model.message}</ReactMarkdown>
+                            <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                              {message.model.message}
+                            </ReactMarkdown>
                           </div>
                         ) : (
                           <AssistantMessageContent message={message} />

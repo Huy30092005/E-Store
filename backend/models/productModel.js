@@ -46,13 +46,6 @@ productSchema.virtual("stock").get(function stock() {
   return this.stockQuantity;
 });
 
-productSchema.virtual("comments", {
-  ref: "comment",
-  localField: "_id",
-  foreignField: "product",
-  justOne: false,
-});
-
 const productModel =
   mongoose.models.product || mongoose.model("product", productSchema);
 

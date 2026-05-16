@@ -12,8 +12,4 @@ commentRoute.get("/product/:productId", getCommentsByProduct);
 // Add a comment to a product (requires authentication)
 commentRoute.post("/product/:productId", auth, addComment);
 
-commentRoute.stack.forEach((r) => {
-  if (r.route) console.log(r.route.path, Object.keys(r.route.methods));
-});
-
 export default commentRoute;
