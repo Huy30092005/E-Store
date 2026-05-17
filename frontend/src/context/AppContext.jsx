@@ -122,7 +122,7 @@ export function AppProvider({ children }) {
     } catch {
       return;
     }
-  }, [cart]);
+  }, []);
 
   const removeFromCart = useCallback(async (productId, model = "default") => {
     try {
@@ -131,7 +131,7 @@ export function AppProvider({ children }) {
     } catch {
       return;
     }
-  }, [cart]);
+  }, []);
 
   const clearCart = useCallback(async () => {
     try {
