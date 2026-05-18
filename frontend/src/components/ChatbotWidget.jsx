@@ -18,7 +18,7 @@ const WELCOME_MESSAGE = {
   sender: "SimTech Assistant",
   direction: "incoming",
   content:
-    "Hi! I'm your SimTech assistant. Ask me about products, recommendations, orders, or store data.",
+    "Hi! I'm your SimTech assistant. Ask me about products, pricing, specs, and recommendations.",
   sentTime: "just now",
 };
 const GENERIC_PRODUCT_NAME_TOKENS = new Set([
@@ -606,7 +606,7 @@ const ChatbotWidget = () => {
                 <MessageList
                   typingIndicator={
                     isLoading ? (
-                      <TypingIndicator content="SimTech Assistant is checking store data..." />
+                    <TypingIndicator content="SimTech Assistant is checking the product catalog..." />
                     ) : null
                   }
                 >
@@ -635,7 +635,7 @@ const ChatbotWidget = () => {
                   attachButton={false}
                   sendButton
                   disabled={isLoading}
-                  placeholder="Ask about products, pricing, specs, or support..."
+                  placeholder="Ask about products, pricing, specs, or recommendations..."
                   onSend={handleSendMessage}
                 />
               </ChatContainer>

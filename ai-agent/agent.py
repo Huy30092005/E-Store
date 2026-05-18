@@ -134,6 +134,11 @@ SENSITIVE_REQUEST_PATTERNS = [
         r"\b(?:user|users|customer|customers|admin|admins)\b.*\b(?:email|phone|address|password|token|role|id)s?\b",
         r"\b(?:order|orders|payment|payments)\b.*\b(?:address|email|phone|user|customer|amount|status)s?\b",
         r"\b(?:dump|export|list|show|get|retrieve)\b.*\b(?:users?|customers?|orders?|databases?|collections?|schemas?)\b",
+        r"\bselect\b[\s\S]{0,120}\bfrom\b[\s`\"'\[]*(?:users?|customers?|orders?|carts?|comments?|admins?)\b",
+        r"\b(?:from|table|collection)\b\s*[`\"'\[]*(?:users?|customers?|orders?|carts?|comments?|admins?)\b",
+        r"\bdb\s*[\.\[]\s*[`\"']?(?:users?|customers?|orders?|carts?|comments?|admins?)\b",
+        r"\"collection\"\s*:\s*\"(?:users?|customers?|orders?|carts?|comments?|admins?)\"",
+        r"\b(?:users?|customers?|orders?|carts?|comments?|admins?)\s*\.\s*(?:find|aggregate|distinct|count)",
         r"\b(?:ignore|bypass|override|forget)\b.*\b(?:instruction|rules|guard|policy|system)\b",
     )
 ]
