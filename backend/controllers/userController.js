@@ -48,7 +48,7 @@ const googleAuth = async (req, res) => {
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const { name, email, sub: googleId } = ticket.getPayload();
+    const { name, email, sub: providerId } = ticket.getPayload();
 
     let user = await userModel.findOne({ email });
 
@@ -56,12 +56,13 @@ const googleAuth = async (req, res) => {
       user = new userModel({
         name,
         email,
-        googleId,
+        provider: "google",
+        providerId,
         role: "customer",
       });
       await user.save();
-    } else if (!user.googleId) {
-      user.googleId = googleId;
+    } else if (user.provider === "google" && !user.providerId) {
+      user.providerId = providerId;
       await user.save();
     }
 

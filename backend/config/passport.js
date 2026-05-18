@@ -23,7 +23,13 @@ passport.use(
       console.log("=== Strategy Hit ===");   // if this never prints, code exchange failed
       console.log("Profile ID:", profile.id);
       try {
-        const email = profile.emails[0].value;
+        const email = profile.emails?.[0]?.value;
+        if (!email) {
+          return done(null, false, {
+            message: "Google account did not provide an email address.",
+          });
+        }
+
         let user = await userModel.findOne({ email });
 
        
@@ -39,6 +45,9 @@ passport.use(
           return done(null, false, {
             message: "Email already registered. Please log in with your password.",
           });
+        } else if (!user.providerId) {
+          user.providerId = profile.id;
+          await user.save();
         }
 
         return done(null, user);

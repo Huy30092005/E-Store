@@ -79,17 +79,23 @@ userRouter.get(
   "/auth/google/callback",
   (req, res, next) => {
     const frontendURL = getFrontendURLFromState(req.query.state);
-    passport.authenticate("google", {
-      failureRedirect: `${frontendURL}/login?error=oauth_failed`,
-      session: false,
+
+    passport.authenticate("google", { session: false }, (error, user) => {
+      if (error) {
+        console.error("Google OAuth callback failed:", error);
+        return res.redirect(`${frontendURL}/login?error=oauth_failed`);
+      }
+
+      if (!user) {
+        return res.redirect(`${frontendURL}/login?error=oauth_failed`);
+      }
+
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "1d",
+      });
+
+      return res.redirect(`${frontendURL}/oauth-callback?token=${token}`);
     })(req, res, next);
-  },
-  (req, res) => {
-    const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
-    const frontendURL = getFrontendURLFromState(req.query.state);
-    res.redirect(`${frontendURL}/oauth-callback?token=${token}`);
   }
 );
 
