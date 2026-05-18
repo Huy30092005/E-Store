@@ -1,11 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import uvicorn
  
-from agent import MongoAIAgent
+from agent import MongoAIAgent, UnsafeQueryError
  
 app = FastAPI(
     title="MongoDB AI Agent",
@@ -28,15 +27,17 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
  
 class QueryRequest(BaseModel):
-    question: str
-    database: Optional[str] = None          # override default DB at runtime
+    question: str = Field(..., min_length=1, max_length=500)
     conversation_id: Optional[str] = None   # future: multi-turn support
+
+    class Config:
+        extra = "forbid"
  
  
 class QueryResponse(BaseModel):
     question: str
     answer: str
-    query_used: Optional[dict] = None       # the MQL that was executed
+    query_used: Optional[dict] = None       # hidden unless the agent is in debug mode
     raw_count: Optional[int] = None         # number of documents matched
     database: str
     collection: Optional[str] = None
@@ -99,20 +100,23 @@ async def health():
  
  
 @app.get("/collections", tags=["Schema"])
-async def list_collections(database: Optional[str] = None):
-    """List all collections in the target database."""
+async def list_collections():
+    """List public collections available to the chatbot."""
     if _agent is None:
         raise HTTPException(status_code=503, detail="Agent not ready.")
-    result = await _agent.list_collections(database)
+    result = await _agent.list_collections()
     return result
  
  
 @app.get("/schema/{collection}", tags=["Schema"])
-async def collection_schema(collection: str, database: Optional[str] = None):
-    """Return an inferred schema (field names + types) for a collection."""
+async def collection_schema(collection: str):
+    """Return the public chatbot schema for an allowed collection."""
     if _agent is None:
         raise HTTPException(status_code=503, detail="Agent not ready.")
-    result = await _agent.infer_schema(collection, database)
+    try:
+        result = await _agent.infer_schema(collection)
+    except UnsafeQueryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
     return result
  
  
@@ -129,9 +133,10 @@ async def query(request: QueryRequest):
     try:
         result = await _agent.ask(
             question=request.question,
-            database=request.database,
         )
         return QueryResponse(**result)
+    except UnsafeQueryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
  
@@ -142,4 +147,3 @@ async def query(request: QueryRequest):
  
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
- 
