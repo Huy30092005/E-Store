@@ -11,7 +11,16 @@ const userSchema = new mongoose.Schema(
         return !this.provider || this.provider === "local";
       },
     },
-    role: { type: String, default: "customer" },
+    role: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
+    status: {
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active",
+    },
     cartData: { type: Object, default: {} },
     provider: { type: String, enum: ["local", "google", "github"], default: "local" },
     providerId: { type: String },

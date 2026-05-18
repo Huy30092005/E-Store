@@ -6,6 +6,12 @@ import {
   googleAuth,
   getCurrentUser,
   listUsers,
+  createAdminUser,
+  updateUserProfile,
+  updateUserRole,
+  updateUserStatus,
+  resetUserPassword,
+  deleteUser,
 } from "../controllers/userController.js";
 import authUser from "../middleware/auth.js";
 import adminAuth from "../middleware/adminAuth.js";
@@ -63,6 +69,13 @@ userRouter.post("/admin", adminLogin);
 userRouter.post("/google-auth", googleAuth);
 userRouter.get("/me", authUser, getCurrentUser);
 userRouter.get("/list", adminAuth, listUsers);
+userRouter.get("/admin/users", adminAuth, listUsers);
+userRouter.post("/admin/users", adminAuth, createAdminUser);
+userRouter.patch("/admin/users/:userId", adminAuth, updateUserProfile);
+userRouter.patch("/admin/users/:userId/role", adminAuth, updateUserRole);
+userRouter.patch("/admin/users/:userId/status", adminAuth, updateUserStatus);
+userRouter.patch("/admin/users/:userId/password", adminAuth, resetUserPassword);
+userRouter.delete("/admin/users/:userId", adminAuth, deleteUser);
 
 userRouter.get(
   "/auth/google",

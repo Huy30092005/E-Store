@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import userModel from "../models/userModel.js";
 
 const getTokenFromHeaders = (headers) => {
   const bearer = headers.authorization;
@@ -20,8 +21,14 @@ const authUser = async (req, res, next) => {
 
   try {
     const tokenDecoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userModel.findById(tokenDecoded.id).select("_id role status");
+
+    if (!user || user.status === "blocked") {
+      return res.json({ success: false, message: "Not authorized!" });
+    }
+
     req.userId = tokenDecoded.id;
-    req.user = { id: tokenDecoded.id };
+    req.user = { id: tokenDecoded.id, role: user.role || "customer" };
     req.body = { ...req.body, userId: tokenDecoded.id };
 
     // Refresh token if it's about to expire in less than 5 minutes

@@ -15,12 +15,14 @@ import DashboardSharpIcon from "@mui/icons-material/DashboardSharp";
 import AddBoxSharpIcon from "@mui/icons-material/AddBoxSharp";
 import ViewListSharpIcon from "@mui/icons-material/ViewListSharp";
 import LocalShippingSharpIcon from "@mui/icons-material/LocalShippingSharp";
+import ManageAccountsSharpIcon from "@mui/icons-material/ManageAccountsSharp";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: <DashboardSharpIcon />, end: true },
   { to: "/add", label: "Add Items", icon: <AddBoxSharpIcon /> },
   { to: "/list", label: "List Items", icon: <ViewListSharpIcon /> },
   { to: "/orders", label: "Orders", icon: <LocalShippingSharpIcon /> },
+  { to: "/users", label: "Users", icon: <ManageAccountsSharpIcon /> },
 ];
 
 const Sidebar = () => {
