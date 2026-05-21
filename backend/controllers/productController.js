@@ -1,34 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import { promises as fs } from "fs";
 import productModel from "../models/productModel.js";
-import axios from "axios";
-
-// helper — fire and forget, never block the main response
-const syncVectorDB = async (method, data) => {
-  try {
-    console.log(
-      `[Vector Sync] Sending ${method.toUpperCase()} request to ${AI_SERVICE_URL}/ingest`,
-      data
-    );
-    const response = await axios({
-      method,
-      url: `${AI_SERVICE_URL}/ingest`,
-      data,
-      timeout: 10000,
-    });
-    console.log(
-      `[Vector Sync] ${method.toUpperCase()} ${AI_SERVICE_URL}/ingest responded with ${response.status}`,
-      response.data
-    );
-  } catch (err) {
-    console.error("⚠️  Vector sync failed:", err.message);
-    if (err.response) {
-      console.error("[Vector Sync] Response status:", err.response.status);
-      console.error("[Vector Sync] Response data:", err.response.data);
-    }
-    // intentionally not re-throwing — product op already succeeded
-  }
-};
 
 const parseList = (value) => {
   if (!value) return [];
@@ -149,8 +121,6 @@ const addProduct = async (req, res) => {
     const product = new productModel(productData);
     await product.save();
 
-    void syncVectorDB("post", { product: product.toObject() });
-
     res.json({ success: true, message: "Product added" });
   } catch (error) {
     console.log(error);
@@ -178,8 +148,6 @@ const updateProduct = async (req, res) => {
       new: true,
       runValidators: true,
     });
-
-    void syncVectorDB("post", { product: updatedProduct.toObject() });
 
     res.json({
       success: true,
@@ -233,8 +201,6 @@ const removeProduct = async (req, res) => {
       return res.json({ success: false, message: "Product not found" });
     }
 
-    void syncVectorDB("delete", { product_id: req.body.id });
-
     res.json({ success: true, message: "Product removed" });
   } catch (error) {
     console.log(error);
@@ -257,8 +223,6 @@ const singleProduct = async (req, res) => {
   }
 };
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
-
 export {
   addProduct,
   listProduct,
@@ -273,9 +237,6 @@ export const createProductDB = async (req, res) => {
   try {
     const product = await productModel.create(req.body);
     res.status(201).json(product);
-
-    // trigger after responding so the client isn't kept waiting
-    void syncVectorDB("post", { product: product.toObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -288,8 +249,6 @@ export const updateProductDB = async (req, res) => {
     const product = await productModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
-
-    void syncVectorDB("post", { product: product.toObject() });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -302,8 +261,6 @@ export const deleteProduct = async (req, res) => {
     const product = await productModel.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product deleted" });
-
-    void syncVectorDB("delete", { product_id: req.params.id });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

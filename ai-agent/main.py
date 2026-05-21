@@ -41,8 +41,8 @@ class QueryResponse(BaseModel):
     raw_count: Optional[int] = None         # number of documents matched
     database: str
     collection: Optional[str] = None
- 
- 
+
+
 class HealthResponse(BaseModel):
     status: str
     mongo_connected: bool
@@ -118,8 +118,8 @@ async def collection_schema(collection: str):
     except UnsafeQueryError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     return result
- 
- 
+
+
 @app.post("/query", response_model=QueryResponse, tags=["Query"])
 async def query(request: QueryRequest):
     """
